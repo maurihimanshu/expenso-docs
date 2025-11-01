@@ -534,5 +534,18 @@ For questions about these Terms, contact:
 
 ---
 
+## 📚 Related Documentation
+
+For information about using the application, please refer to:
+
+- **[README.md](../README.md)** - Project overview and getting started guide
+- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete user manual and instructions
+- **[FEATURES.md](FEATURES.md)** - Application features and capabilities
+- **[SECURITY.md](SECURITY.md)** - Security and privacy implementation details
+- **[QUERY_RUNNER.md](QUERY_RUNNER.md)** - Advanced SQL query feature documentation
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical architecture information
+
+---
+
 **© [2025] [Himanshu Kumar]. All rights reserved. No rights granted except as explicitly stated herein.**
 

@@ -1,5 +1,26 @@
 # Expenso - Architecture Guide
 
+## 📋 Table of Contents
+
+1. [System Architecture Overview](#️-system-architecture-overview)
+2. [Architecture Principles](#-architecture-principles)
+3. [Layer Responsibilities](#-layer-responsibilities)
+4. [Data Flow Architecture](#-data-flow-architecture)
+5. [Component Architecture](#️-component-architecture)
+6. [Database Architecture](#️-database-architecture)
+7. [Security Architecture](#-security-architecture)
+8. [Navigation Architecture](#-navigation-architecture)
+9. [Performance Architecture](#-performance-architecture)
+10. [State Management](#-state-management)
+11. [Testing Architecture](#-testing-architecture)
+12. [Package Structure](#-package-structure)
+13. [Key Architectural Decisions](#-key-architectural-decisions)
+14. [Application Initialization Architecture](#-application-initialization-architecture)
+15. [Scalability Considerations](#-scalability-considerations)
+16. [Related Documentation](#-related-documentation)
+
+---
+
 ## 🏗️ System Architecture Overview
 
 Expenso implements a modern Clean Architecture with Android-specific optimizations, ensuring maintainability, testability, and scalability.
@@ -706,3 +727,14 @@ sequenceDiagram
 - **Plugin Architecture**: Extensible functionality
 - **API Integration**: External service connectivity
 - **Cloud Sync**: Optional data synchronization
+
+---
+
+## 📚 Related Documentation
+
+- **[README.md](../README.md)** - Project overview, technology stack, and getting started guide
+- **[FEATURES.md](FEATURES.md)** - Comprehensive feature documentation
+- **[SECURITY.md](SECURITY.md)** - Security implementation details
+- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete user manual with instructions
+- **[QUERY_RUNNER.md](QUERY_RUNNER.md)** - Advanced SQL query feature guide
+- **[TERMS_AND_CONDITIONS.md](TERMS_AND_CONDITIONS.md)** - Application terms of use

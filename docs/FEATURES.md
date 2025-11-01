@@ -2,14 +2,20 @@
 
 ## 📋 Table of Contents
 
-1. [Authentication & Security](#authentication--security)
-2. [Transaction Management](#transaction-management)
-3. [Budget Tracking](#budget-tracking)
-4. [Financial Analytics](#financial-analytics)
-5. [Dashboard & Overview](#dashboard--overview)
-6. [Settings & Configuration](#settings--configuration)
-7. [Data Export & Backup](#data-export--backup)
-8. [User Interface](#user-interface)
+1. [Authentication & Security](#-authentication--security)
+2. [Transaction Management](#-transaction-management)
+3. [Budget Tracking](#-budget-tracking)
+4. [Financial Analytics](#-financial-analytics)
+5. [Dashboard & Overview](#-dashboard--overview)
+6. [Settings & Configuration](#️-settings--configuration)
+7. [Data Export & Backup](#-data-export--backup)
+8. [User Interface](#-user-interface)
+9. [Application Lifecycle](#-application-lifecycle)
+10. [Future Features](#-future-features)
+11. [Platform Support](#-platform-support)
+12. [Performance Metrics](#-performance-metrics)
+13. [Technical Details](#-technical-details)
+14. [Related Documentation](#-related-documentation)
 
 ---
 
@@ -673,6 +679,14 @@ Deep dive into spending patterns by category:
 
 **Expenso** - Comprehensive, Secure, Offline-First Personal Finance Management
 
-For detailed architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md)  
-For security implementation details, see [SECURITY.md](./SECURITY.md)
+---
+
+## 📚 Related Documentation
+
+- **[README.md](../README.md)** - Project overview, technology stack, and getting started guide
+- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete user manual with step-by-step instructions
+- **[QUERY_RUNNER.md](QUERY_RUNNER.md)** - Advanced SQL query feature documentation
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and technical design
+- **[SECURITY.md](SECURITY.md)** - Security implementation and best practices
+- **[TERMS_AND_CONDITIONS.md](TERMS_AND_CONDITIONS.md)** - Application terms of use
 

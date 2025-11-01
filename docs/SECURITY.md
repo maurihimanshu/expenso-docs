@@ -1,5 +1,25 @@
 # Expenso - Security Implementation
 
+## 📋 Table of Contents
+
+1. [Security Overview](#-security-overview)
+2. [Recent Security Improvements](#-recent-security-improvements)
+3. [Security Architecture](#️-security-architecture)
+4. [Authentication Security](#-authentication-security)
+5. [Data Encryption](#-data-encryption)
+6. [Runtime Security](#️-runtime-security)
+7. [Security Monitoring](#-security-monitoring)
+8. [Database Security](#-database-security)
+9. [Cryptographic Corruption Recovery](#-cryptographic-corruption-recovery)
+10. [Security Incident Response](#-security-incident-response)
+11. [Privacy Protection](#-privacy-protection)
+12. [Security Testing](#-security-testing)
+13. [Security Best Practices](#-security-best-practices)
+14. [Future Security Enhancements](#-future-security-enhancements)
+15. [Related Documentation](#-related-documentation)
+
+---
+
 ## 🔒 Security Overview
 
 Expenso implements enterprise-grade security with multi-layer protection, ensuring complete data privacy and protection against common attack vectors.
@@ -713,3 +733,14 @@ If you discover a security vulnerability, please report it responsibly:
 - Email security concerns to: security@expenso.app
 - Include detailed reproduction steps
 - Allow reasonable time for fixes before disclosure
+
+---
+
+## 📚 Related Documentation
+
+- **[README.md](../README.md)** - Project overview and technology stack
+- **[FEATURES.md](FEATURES.md)** - Complete feature documentation
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design
+- **[USER_GUIDE.md](USER_GUIDE.md)** - User manual with security setup instructions
+- **[QUERY_RUNNER.md](QUERY_RUNNER.md)** - Query Runner security features
+- **[TERMS_AND_CONDITIONS.md](TERMS_AND_CONDITIONS.md)** - Legal terms and privacy policy

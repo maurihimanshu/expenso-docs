@@ -2,6 +2,26 @@
 
 > **Modern Android Finance Management App** - 100% Offline, Enterprise-Grade Security
 
+## 📋 Table of Contents
+
+1. [Overview](#-overview)
+2. [Architecture](#-architecture)
+3. [Security Architecture](#-security-architecture)
+4. [Technology Stack](#-technology-stack)
+5. [User Experience](#-user-experience)
+6. [Development](#-development)
+7. [Security Features](#️-security-features)
+8. [Performance](#-performance)
+9. [Data Flow](#-data-flow)
+10. [UI/UX Design](#-uiux-design)
+11. [Analytics & Reporting](#-analytics--reporting)
+12. [Configuration](#-configuration)
+13. [Getting Started](#-getting-started)
+14. [Documentation](#-documentation)
+15. [Support](#-support)
+
+---
+
 ## 🎯 Overview
 
 Expenso is a comprehensive personal finance management application built with modern Android architecture, featuring enterprise-grade security and 100% offline operation.
@@ -399,9 +419,57 @@ Activities use the `InitializationListener` pattern to wait for initialization b
 
 **Note**: `DashboardActivity` serves as the launcher activity, replacing the previous `MainActivity`. It combines authentication checks, session management, deep link routing, and the dashboard UI in a single activity for improved performance and simplicity.
 
+## 📚 Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+### User Documentation
+- **[User Guide](docs/USER_GUIDE.md)** - Complete user manual with step-by-step instructions
+  - Getting started, authentication, and account setup
+  - Transaction management and categorization
+  - Budget tracking and financial goals
+  - Analytics and reporting features
+  - Data backup and restore procedures
+  - Troubleshooting and FAQs
+
+- **[Query Runner Guide](docs/QUERY_RUNNER.md)** - Advanced SQL query feature documentation
+  - SQL query execution and security
+  - Transaction table schema reference
+  - 30+ sample queries and use cases
+  - Best practices and optimization tips
+
+### Technical Documentation
+- **[Features Documentation](docs/FEATURES.md)** - Detailed feature specifications
+  - Authentication and security features
+  - Transaction and budget management
+  - Analytics and data export capabilities
+  - UI/UX implementation details
+  - Application lifecycle and performance
+
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System architecture and design
+  - Clean Architecture implementation
+  - Component architecture and data flow
+  - Database schema and relationships
+  - Performance optimization strategies
+  - Application initialization flow
+
+- **[Security Implementation](docs/SECURITY.md)** - Security architecture details
+  - Multi-layer security model
+  - Encryption and key management
+  - Authentication and session management
+  - Runtime protection mechanisms
+  - Cryptographic corruption recovery
+
+### Legal
+- **[Terms and Conditions](docs/TERMS_AND_CONDITIONS.md)** - Application terms of use
+  - User responsibilities and disclaimers
+  - Privacy and data protection
+  - Limitations of liability
+  - Usage restrictions
+
 ## 📞 Support
 
-For technical support or feature requests, please refer to the project documentation or create an issue in the repository.
+For technical support or feature requests, please refer to the project documentation above or create an issue in the repository.
 
 ---
 

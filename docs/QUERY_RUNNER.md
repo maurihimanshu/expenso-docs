@@ -2,15 +2,18 @@
 
 ## 📋 Table of Contents
 
-1. [Overview](#overview)
-2. [Features & Capabilities](#features--capabilities)
-3. [Security Architecture](#security-architecture)
-4. [Pros & Cons](#pros--cons)
-5. [Transaction Table Schema](#transaction-table-schema)
-6. [Sample Queries](#sample-queries)
-7. [Usage Guidelines](#usage-guidelines)
-8. [Limitations & Restrictions](#limitations--restrictions)
-9. [Best Practices](#best-practices)
+1. [Overview](#-overview)
+2. [Features & Capabilities](#-features--capabilities)
+3. [Security Architecture](#️-security-architecture)
+4. [Pros & Cons](#-pros--cons)
+5. [Transaction Table Schema](#-transaction-table-schema)
+6. [Sample Queries](#-sample-queries)
+7. [Usage Guidelines](#-usage-guidelines)
+8. [Limitations & Restrictions](#️-limitations--restrictions)
+9. [Best Practices](#-best-practices)
+10. [Troubleshooting](#-troubleshooting)
+11. [Additional Resources](#-additional-resources)
+12. [Notes](#-notes)
 
 ---
 
@@ -789,9 +792,11 @@ WHERE category_id IN (
 - SQLite Aggregate Functions: https://www.sqlite.org/lang_aggfunc.html
 
 ### Related Expenso Documentation
-- **ARCHITECTURE.md**: System architecture and database design
-- **SECURITY.md**: Security implementation details
-- **FEATURES.md**: Complete feature list
+- **[ARCHITECTURE.md](ARCHITECTURE.md)**: System architecture and database design
+- **[SECURITY.md](SECURITY.md)**: Security implementation details
+- **[FEATURES.md](FEATURES.md)**: Complete feature list
+- **[USER_GUIDE.md](USER_GUIDE.md)**: Complete user manual and usage instructions
+- **[README.md](../README.md)**: Project overview and getting started guide
 
 ### Transaction Data Reference
 - See `TransactionEntity.java` for complete field definitions

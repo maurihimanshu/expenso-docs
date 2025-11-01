@@ -2,18 +2,20 @@
 
 ## 📋 Table of Contents
 
-1. [Getting Started](#getting-started)
-2. [Authentication & Security](#authentication--security)
-3. [Dashboard](#dashboard)
-4. [Managing Transactions](#managing-transactions)
-5. [Budget Tracking](#budget-tracking)
-6. [Financial Analytics](#financial-analytics)
-7. [Settings & Profile](#settings--profile)
-8. [Data Backup & Restore](#data-backup--restore)
-9. [Configuration](#configuration)
-10. [Advanced Features](#advanced-features)
-11. [Tips & Best Practices](#tips--best-practices)
-12. [Troubleshooting](#troubleshooting)
+1. [Getting Started](#-getting-started)
+2. [Authentication & Security](#-authentication--security)
+3. [Dashboard](#-dashboard)
+4. [Managing Transactions](#-managing-transactions)
+5. [Budget Tracking](#-budget-tracking)
+6. [Financial Analytics](#-financial-analytics)
+7. [Settings & Profile](#️-settings--profile)
+8. [Data Backup & Restore](#-data-backup--restore)
+9. [Configuration](#-configuration)
+10. [Advanced Features](#-advanced-features)
+11. [Tips & Best Practices](#-tips--best-practices)
+12. [Troubleshooting](#-troubleshooting)
+13. [Quick Reference](#-quick-reference)
+14. [Additional Resources](#-additional-resources)
 
 ---
 
@@ -999,11 +1001,40 @@ Query Runner is an advanced feature for users with SQL knowledge who want to per
 
 ### Related Documentation
 
-- **[QUERY_RUNNER.md](QUERY_RUNNER.md)**: Advanced SQL query feature guide
-- **[FEATURES.md](FEATURES.md)**: Complete feature documentation
-- **[ARCHITECTURE.md](ARCHITECTURE.md)**: Technical architecture details
-- **[SECURITY.md](SECURITY.md)**: Security implementation information
-- **[README.md](../README.md)**: Project overview and setup
+For more detailed information, please refer to these documents:
+
+#### User-Focused Documentation
+- **[QUERY_RUNNER.md](QUERY_RUNNER.md)** - Advanced SQL query feature guide
+  - For power users who want to execute custom SQL queries
+  - Includes 30+ sample queries and security details
+  - Transaction table schema reference
+
+#### Technical Documentation
+- **[FEATURES.md](FEATURES.md)** - Complete feature documentation
+  - Detailed feature specifications and implementation
+  - Technical capabilities and configurations
+  - Platform support and performance metrics
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture details
+  - Clean Architecture implementation
+  - Component relationships and data flow
+  - Database schema and design patterns
+
+- **[SECURITY.md](SECURITY.md)** - Security implementation information
+  - Multi-layer security architecture
+  - Encryption and authentication details
+  - Privacy protection mechanisms
+
+#### General
+- **[README.md](../README.md)** - Project overview and setup
+  - Getting started with development
+  - Technology stack and dependencies
+  - Build commands and prerequisites
+
+- **[TERMS_AND_CONDITIONS.md](TERMS_AND_CONDITIONS.md)** - Legal terms
+  - Application terms of use
+  - User responsibilities and disclaimers
+  - Privacy policy information
 
 ### Support
 
