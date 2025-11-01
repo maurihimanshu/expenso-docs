@@ -472,12 +472,17 @@ com.offline.expenso/
 │   ├── ui/activities/       # Activities
 │   ├── ui/viewmodels/       # ViewModels
 │   ├── ui/adapters/         # RecyclerView Adapters
+│   ├── ui/fragments/        # Dialog Fragments
 │   ├── ui/dialogs/          # Dialog Components
 │   ├── common/base/         # Base Classes
+│   ├── common/utils/        # UI Utilities
 │   ├── theming/             # Theme Management
 │   └── navigation/          # Navigation Helpers
 ├── 🔧 domain/               # Business Logic
 │   ├── entities/            # Domain Models
+│   │   ├── Budget           # Budget with recurring support
+│   │   ├── BudgetHistory    # Budget period snapshots
+│   │   └── ...              # Other entities
 │   ├── usecases/            # Business Use Cases
 │   ├── repositories/        # Repository Interfaces
 │   ├── services/            # Domain Services
@@ -487,8 +492,21 @@ com.offline.expenso/
 │   ├── local/database/      # Room Database
 │   ├── local/dao/           # Data Access Objects
 │   ├── repositories/        # Repository Implementations
+│   │   ├── BudgetRepository         # Budget CRUD
+│   │   ├── BudgetHistoryRepository  # History access
+│   │   └── ...
 │   ├── security/            # Security Components
-│   ├── backup/              # Backup Components
+│   ├── backup/              # Backup & Restore System
+│   │   ├── BackupManager        # Multi-table backup orchestrator
+│   │   ├── RestoreManager       # Multi-table restore orchestrator
+│   │   ├── ZipBackupHandler     # ZIP archive handling
+│   │   ├── ManifestManager      # Manifest JSON handling
+│   │   ├── models/              # Backup/restore models
+│   │   ├── exporters/           # Table-specific CSV exporters (7)
+│   │   └── importers/           # Table-specific CSV importers (7)
+│   ├── budget/              # Budget Workers
+│   │   ├── BudgetResetWorker       # Period reset
+│   │   └── BudgetResetScheduler    # Scheduler
 │   ├── mappers/             # Data Mappers
 │   └── analytics/           # Analytics Engine
 └── 🔒 core/                 # Shared Components
@@ -601,12 +619,17 @@ sequenceDiagram
    - TransactionSecureRepository
    - UserSecureRepository
    - BudgetRepository
+   - BudgetHistoryRepository
    - ConfigurationRepository
 
 4. **Domain Services**: Business logic services
    - ConfigurationService
    - ConfigurationSeedingService
    - UserRegistrationService
+
+5. **WorkManager Schedulers**: Background task scheduling
+   - BudgetResetScheduler (daily budget period reset)
+   - Auto backup scheduler (user-configured frequency)
 
 ### Initialization Safety Mechanisms
 

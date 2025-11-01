@@ -240,6 +240,21 @@ Budgets help you control your spending by setting limits and tracking your progr
    - Budget appears in your budgets list
    - Tracking begins immediately
 
+### Budget Types
+
+**Recurring Budgets** (Weekly/Monthly/Yearly):
+- Automatically reset when the period ends
+- Current period saved to history
+- Spending resets to $0 for new period
+- Budget continues indefinitely
+- View past performance in budget history
+
+**Custom Budgets** (One-Time):
+- Fixed start and end dates
+- Expire when period ends
+- No automatic reset
+- Good for special projects or one-time goals
+
 ### Budget Status
 
 Budgets automatically track your spending and show status:
@@ -247,8 +262,7 @@ Budgets automatically track your spending and show status:
 - **🟢 On Track**: Spending is under 80% of budget - you're doing well!
 - **🟠 Near Limit**: Spending is 80-100% of budget - watch your spending
 - **🔴 Over Budget**: You've exceeded the budget limit
-- **⏸️ Paused**: Budget is temporarily disabled
-- **📅 Expired**: Budget period has ended
+- **📅 Expired**: Budget period has ended (custom budgets only)
 
 ### Budget Features
 
@@ -270,29 +284,52 @@ Budgets automatically track your spending and show status:
 
 ### Managing Budgets
 
+**Search Budgets**
+- Use the search bar at the top to find budgets quickly
+- Search filters by budget name, description, or category
+- Results update in real-time as you type
+
+**Filter by Status**
+- Use filter chips to show budgets by status:
+  - **All**: Show all budgets (default)
+  - **On Track**: Only budgets under 80% spent
+  - **Near Limit**: Budgets at 80-100% spent
+  - **Over Budget**: Budgets that exceeded limits
+- Tap a chip to activate filter, tap again to deselect
+
 **Edit Budget**
-- Tap a budget to open details
-- Tap "Edit" to modify budget amount, period, or dates
+- Tap the three-dot menu (⋮) on a budget card
+- Select "Edit Budget"
+- Modify budget amount, period, or dates
 - Changes apply immediately
 
-**Delete Budget**
-- Tap a budget to open details
-- Tap "Delete" to remove the budget
-- Confirm deletion in the dialog
-- Budget history is preserved
+**View History** (Recurring Budgets Only)
+- Tap the three-dot menu (⋮) on a budget card
+- Select "View History"
+- See all past periods with:
+  - Period dates
+  - Budgeted vs spent amounts
+  - Final status and percentage
+  - Visual progress indicators
+- Great for tracking improvement over time!
 
-**Pause/Resume Budget**
-- Temporarily pause a budget without deleting it
-- Resume when you want to continue tracking
-- Useful for seasonal or temporary budgets
+**Delete Budget**
+- Tap the three-dot menu (⋮) on a budget card
+- Select "Delete Budget"
+- Confirm deletion in the dialog
+- Budget and its history will be removed
 
 ### Budget Tips
 
 - **Start Small**: Begin with one or two important categories
 - **Be Realistic**: Set achievable budget amounts based on past spending
+- **Use Recurring Budgets**: Choose Weekly/Monthly/Yearly for ongoing spending categories
+- **Use Custom for Projects**: Choose Custom period for one-time goals or projects
+- **Check History**: Review past periods to identify spending patterns
 - **Review Regularly**: Check budget status weekly to stay on track
+- **Use Search & Filters**: Find budgets quickly using search and status filters
 - **Adjust as Needed**: Don't hesitate to edit budgets as your needs change
-- **Use Categories**: Link budgets to categories for automatic tracking
+- **Track Trends**: Use budget history to see if you're improving over time
 
 ---
 

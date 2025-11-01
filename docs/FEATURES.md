@@ -127,13 +127,25 @@
 - **Budget Description**: Optional description for budget purpose
 - **Budget Amount**: Target spending amount with currency support
 - **Category Association**: Link budget to specific transaction category
-- **Period Selection**: Choose budget period (Monthly, Weekly, Yearly)
-- **Start & End Dates**: Define budget active period
+- **Period Selection**: Choose budget period (Weekly, Monthly, Yearly, Custom)
+- **Start & End Dates**: Automatically calculated for recurring budgets, manual for custom
+- **Budget Type**: Automatically determined based on period selection
 
 ### Budget Types
-- **Category Budgets**: Spending limits for specific categories
-- **Period-based Budgets**: Recurring budgets with automatic period management
-- **Custom Period Budgets**: User-defined date range budgets
+
+#### Recurring Budgets (Weekly/Monthly/Yearly)
+- **Auto-Reset**: Automatically reset when period ends
+- **History Tracking**: Each period saved to history for performance tracking
+- **Continuous**: Budget continues indefinitely across periods
+- **Automatic Period Management**: Dates updated to next period automatically
+- **Zero Spent Amount**: Spending resets to $0 at start of new period
+- **Historical Data**: View past performance for trend analysis
+
+#### One-Time Budgets (Custom Period)
+- **Fixed Duration**: User-defined start and end dates
+- **Expire on End Date**: Marked as inactive when period ends
+- **No Auto-Reset**: Budget ends after single period
+- **No History**: Custom budgets don't create historical records
 
 ### Budget Status Tracking
 
@@ -159,16 +171,28 @@
 - **Spending Alerts**: Notifications when approaching budget limit
 
 ### Budget Operations
-- **Create Budget**: Material dialog for budget creation
-- **Edit Budget**: Modify budget properties
-- **Delete Budget**: Remove budget (with confirmation)
-- **Pause/Resume**: Temporarily disable/enable budgets
-- **Budget History**: Track budget performance over time
+- **Create Budget**: Material dialog for budget creation with period selection
+- **Edit Budget**: Modify budget properties (amount, period, dates, notes)
+- **Delete Budget**: Remove budget with confirmation dialog
+- **View History**: Access historical performance data for recurring budgets
+- **Search Budgets**: Real-time search by name, description, or category
+- **Filter by Status**: Filter budgets by status (All, On Track, Near Limit, Over Budget)
 
-### Budget Analytics
+### Budget History & Analytics
+
+#### Historical Tracking
+- **Period Snapshots**: Each completed budget period saved to history
+- **Historical Metrics**: Budgeted amount, spent amount, remaining amount, percentage
+- **Final Status**: Status at end of period (On Track, Near Limit, Over Budget)
+- **Period Information**: Start date, end date, and period type
+- **View History Dialog**: Material dialog showing all past periods for a budget
+- **Trend Analysis**: Compare performance across multiple periods
+
+#### Budget Analytics
 - **Category Performance**: Compare budgeted vs actual spending per category
 - **Period Comparison**: Compare spending across different periods
-- **Trend Analysis**: Visual trends for budget adherence
+- **Search & Filter**: Find budgets quickly with real-time search
+- **Status Filtering**: View budgets by current status
 
 ---
 
