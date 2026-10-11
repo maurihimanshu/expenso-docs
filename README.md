@@ -331,7 +331,7 @@ Generates formal financial reports offline with iText7:
 ### Installation & Run
 1. Clone the repository and open `expenso-android` in Android Studio:
    ```bash
-   git clone https://github.com/himanshu-kumar-77/expenso-android.git
+   git clone https://github.com/maurihimanshu/expenso-android.git
    ```
 2. Build and run debug variant:
    ```bash
