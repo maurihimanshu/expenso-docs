@@ -1,746 +1,186 @@
-# Expenso - Security Implementation
+# Expenso - Security & Cryptographic Architecture
 
 ## 📋 Table of Contents
 
-1. [Security Overview](#-security-overview)
-2. [Recent Security Improvements](#-recent-security-improvements)
-3. [Security Architecture](#️-security-architecture)
-4. [Authentication Security](#-authentication-security)
-5. [Data Encryption](#-data-encryption)
-6. [Runtime Security](#️-runtime-security)
-7. [Security Monitoring](#-security-monitoring)
-8. [Database Security](#-database-security)
-9. [Cryptographic Corruption Recovery](#-cryptographic-corruption-recovery)
-10. [Security Incident Response](#-security-incident-response)
-11. [Privacy Protection](#-privacy-protection)
-12. [Security Testing](#-security-testing)
-13. [Security Best Practices](#-security-best-practices)
-14. [Future Security Enhancements](#-future-security-enhancements)
-15. [Related Documentation](#-related-documentation)
+1. [Security Philosophy](#-security-philosophy)
+2. [Dual-Tier Cryptographic Architecture](#-dual-tier-cryptographic-architecture)
+3. [Database Encryption (SQLCipher 4.17.0)](#-database-encryption-sqlcipher-4170)
+4. [Isolated Database Key Management](#-isolated-database-key-management)
+5. [Column-Level Encryption (AES-256-GCM)](#-column-level-encryption-aes-256-gcm)
+6. [Password & Recovery Hashing (PBKDF2)](#-password--recovery-hashing-pbkdf2)
+7. [Session Security & Lifetime](#-session-security--lifetime)
+8. [Safe Query Runner Sandbox](#-safe-query-runner-sandbox)
+9. [Runtime Integrity & Audit Logging](#-runtime-integrity--audit-logging)
+10. [Cryptographic Corruption Recovery](#-cryptographic-corruption-recovery)
+11. [Security Checklist for Developers](#-security-checklist-for-developers)
+12. [Related Documentation](#-related-documentation)
 
 ---
 
-## 🔒 Security Overview
+## 🔒 Security Philosophy
 
-Expenso implements enterprise-grade security with multi-layer protection, ensuring complete data privacy and protection against common attack vectors.
+Expenso operates on a strict **Zero-Trust, Zero-Telemetry, 100% Offline** security model:
+- **Zero Remote Dependency**: Absolute absence of `android.permission.INTERNET`. No remote synchronization, analytics pings, or cloud servers.
+- **Hardware-Backed Cryptography**: All master encryption keys reside in the Android Hardware Keystore (backed by TEE / StrongBox Keymaster where available).
+- **Defense in Depth**: Database files on disk are fully encrypted with SQLCipher, sensitive credential fields utilize column-level AES-GCM, and direct SQL queries are strictly AST-sandboxed.
 
-## 🔐 Recent Security Improvements
+---
 
-### Critical Security Enhancements (2024)
-
-1. **Hardware-Backed Database Encryption**
-   - Migrated from hard-coded passphrase to Android Keystore-generated keys
-   - Each device has unique encryption key stored in hardware-backed keystore
-   - Database passphrase dynamically generated using AES-256-GCM
-
-2. **Encrypted Session Storage**
-   - Migrated from plain SharedPreferences to EncryptedSharedPreferences
-   - Session tokens, user IDs, and emails now AES-256 encrypted
-   - Keys stored in Android Keystore with hardware protection when available
-   - **Deep exception chain traversal** for corruption detection (handles wrapped AEADBadTagException)
-   - **Automatic recovery mechanism** that clears corrupted data and recreates encrypted storage
-   - **Critical writes use commit()** for immediate persistence during session creation
-
-3. **Secure Build Configuration**
-   - Signing credentials moved to external configuration
-   - No hard-coded passwords in source code
-   - Environment variable support for CI/CD pipelines
-
-## 🛡️ Security Architecture
-
-### Multi-Layer Security Model
+## 🛡️ Dual-Tier Cryptographic Architecture
 
 ```mermaid
 graph TD
-    subgraph "🔐 Authentication Security"
-        A[Biometric Authentication<br/>Fingerprint/Face ID]
-        B[PIN Authentication<br/>6-digit secure PIN]
-        C[Session Management<br/>Auto-logout protection]
-        D[Multi-Factor Auth<br/>Biometric + PIN]
+    subgraph "Tier 1: Hardware-Backed Keystore"
+        MK[MasterKey: expenso_master_key<br/>AndroidKeyStore Provider]
+        DMK[DB MasterKey: expenso_db_master_key<br/>AndroidKeyStore Provider]
     end
-    
-    subgraph "🔒 Data Encryption"
-        E[AES-256-GCM<br/>Field-level encryption]
-        F[SQLCipher Database<br/>Full database encryption]
-        G[Android Keystore<br/>Hardware-backed keys]
-        H[Secure Key Derivation<br/>PBKDF2 + Argon2]
+
+    subgraph "Tier 2: Isolated Encrypted Vaults"
+        PREF_APP[EncryptedSharedPreferences: app_prefs.xml<br/>User Sessions & Preferences]
+        PREF_DB[DatabaseKeyManager Vault: expenso_db_key_prefs.xml<br/>Isolated 64-Char DB Passphrase]
     end
-    
-    subgraph "🛡️ Runtime Protection"
-        I[Root Detection<br/>Jailbreak prevention]
-        J[Debug Detection<br/>Anti-debugging measures]
-        K[Emulator Detection<br/>Analysis prevention]
-        L[App Integrity<br/>Tamper detection]
+
+    subgraph "Operational Cryptography"
+        AES_MGR[AESEncryptionManager: AES-256-GCM<br/>Personal Data & Audit Trail]
+        SQLC[SQLCipher 4.17.0: AES-256-CBC<br/>Database File: expenso_secure.db]
+        PBKDF2[AndroidPasswordHashingService<br/>PBKDF2WithHmacSHA256 100,000 Iters]
     end
-    
-    subgraph "📊 Security Monitoring"
-        M[Audit Logging<br/>Complete event tracking]
-        N[Threat Detection<br/>Anomaly detection]
-        O[Access Control<br/>Permission management]
-        P[Session Monitoring<br/>Activity tracking]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    E --> I
-    F --> J
-    G --> K
-    H --> L
-    
-    I --> M
-    J --> N
-    K --> O
-    L --> P
-    
-    classDef auth fill:#e8f5e8
-    classDef encryption fill:#e1f5fe
-    classDef protection fill:#fff3e0
-    classDef monitoring fill:#f3e5f5
-    
-    class A,B,C,D auth
-    class E,F,G,H encryption
-    class I,J,K,L protection
-    class M,N,O,P monitoring
+
+    MK --> PREF_APP
+    DMK --> PREF_DB
+    PREF_APP --> AES_MGR
+    PREF_APP --> PBKDF2
+    PREF_DB -->|Supplies Passphrase| SQLC
 ```
 
-## 🔐 Authentication Security
+---
 
-### Biometric Authentication Flow
+## 🗄️ Database Encryption (SQLCipher 4.17.0)
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant A as App
-    participant B as BiometricPrompt
-    participant K as Android Keystore
-    participant S as Security Manager
-    
-    U->>A: Login Request
-    A->>B: Initialize Biometric
-    B->>U: Show Biometric Prompt
-    U->>B: Provide Biometric
-    B->>K: Verify Biometric
-    K-->>B: Authentication Result
-    B-->>A: Success/Failure
-    A->>S: Log Authentication Event
-    S-->>A: Security Audit Complete
-    A-->>U: Access Granted/Denied
-```
+- **Library**: `net.zetetic:sqlcipher-android:4.17.0`
+- **Algorithm**: OpenSSL AES-256-CBC with HMAC-SHA512 page integrity checking.
+- **Scope**: Every SQLite database page, WAL (Write-Ahead Logging) journal, shared-memory file (`-shm`), and temporary file is encrypted on storage.
+- **Database File**: `expenso_secure.db`
+- **Performance Evolution (Migration 7→8)**:
+  Prior to version 8, transactions used redundant column-level AES encryption (`amount_encrypted`, etc.). Because SQLCipher already transparently encrypts all SQLite pages on disk, Migration 7→8 safely decrypted transaction columns into plain typed SQLite columns (`amount`, `category_id`, etc.), restoring B-tree indexing, sorting, and aggregate queries (`SUM`, `AVG`) without sacrificing disk security.
 
-### PIN Security Implementation
+---
 
-```mermaid
-graph TB
-    subgraph "🔢 PIN Security Features"
-        A[6-Digit PIN<br/>Enhanced security]
-        B[Complexity Validation<br/>Pattern detection]
-        C[Attempt Limiting<br/>Lockout protection]
-        D[Secure Storage<br/>Encrypted PIN hash]
-    end
-    
-    subgraph "🛡️ Protection Mechanisms"
-        E[Brute Force Protection<br/>Progressive delays]
-        F[Pattern Detection<br/>Sequential/repeated digits]
-        G[Lockout Timer<br/>Automatic unlock]
-        H[Audit Logging<br/>Failed attempts tracking]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    classDef pin fill:#e8f5e8
-    classDef protection fill:#fff3e0
-    
-    class A,B,C,D pin
-    class E,F,G,H protection
-```
+## 🔑 Isolated Database Key Management
 
-## 🔒 Data Encryption
+### Class: `DatabaseKeyManager.java`
 
-**Important Note**: Transaction data is stored as **plain text** within the SQLCipher-encrypted database. Application-level encryption for transaction fields has been removed. Security is provided by SQLCipher's full database encryption. Only user credentials, session data, and other sensitive metadata use AES-256-GCM encryption.
+To eliminate the risk of database lockout caused by user session preference resets, the SQLCipher database passphrase is completely isolated:
 
-### Encryption Architecture
+1. **Independent Vault**: Retains the passphrase inside a dedicated `EncryptedSharedPreferences` (`expenso_db_key_prefs`).
+2. **Dedicated Hardware MasterKey**: Encrypted with its own Keystore alias (`expenso_db_master_key`).
+3. **High-Entropy Generation**: On initial launch, generates a 64-character hexadecimal string using `SecureRandom`:
+   ```java
+   byte[] randomBytes = new byte[32]; // 256 bits of entropy
+   new SecureRandom().nextBytes(randomBytes);
+   String passphrase = bytesToHex(randomBytes);
+   ```
+4. **Resilience**: Even if app preferences or session caches are cleared, the database passphrase remains intact and accessible.
 
-```mermaid
-graph TB
-    subgraph "🔐 Encryption Layers"
-        A[Application Level<br/>Code obfuscation]
-        B[Data Level<br/>AES-256-GCM encryption]
-        C[Database Level<br/>SQLCipher encryption]
-        D[Storage Level<br/>Android Keystore]
-    end
-    
-    subgraph "🔑 Key Management"
-        E[Master Key<br/>Hardware-backed]
-        F[Data Keys<br/>Derived from master]
-        G[Session Keys<br/>Temporary encryption]
-        H[Backup Keys<br/>Secure recovery]
-    end
-    
-    subgraph "🛡️ Key Security"
-        I[Hardware Security Module<br/>Secure key storage]
-        J[Key Rotation<br/>Automatic key updates]
-        K[Key Escrow<br/>Secure backup]
-        L[Key Destruction<br/>Secure key deletion]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    E --> I
-    F --> J
-    G --> K
-    H --> L
-    
-    classDef encryption fill:#e1f5fe
-    classDef keys fill:#f3e5f5
-    classDef security fill:#ffebee
-    
-    class A,B,C,D encryption
-    class E,F,G,H keys
-    class I,J,K,L security
-```
+---
 
-### Data Flow Security
+## 🔐 Column-Level Encryption (AES-256-GCM)
 
-**Transaction Data Flow** (Plain text storage in encrypted database):
-```mermaid
-sequenceDiagram
-    participant U as User Input
-    participant A as Application
-    participant D as SQLCipher DB
-    participant S as Security Audit
-    
-    U->>A: Transaction Data
-    A->>D: Store Plain Text (DB encrypted)
-    D-->>A: Storage Confirmed
-    A->>S: Log Security Event
-    S-->>A: Audit Complete
-```
+### Class: `AESEncryptionManager.java`
 
-**Credential/Session Data Flow** (Application-level encryption):
-```mermaid
-sequenceDiagram
-    participant U as User Input
-    participant A as Application
-    participant E as Encryption Manager
-    participant K as Android Keystore
-    participant D as Database
-    participant S as Security Audit
-    
-    U->>A: Credential/Session Data
-    A->>E: Encrypt Request
-    E->>K: Get Encryption Key
-    K-->>E: Secure Key
-    E->>E: AES-256-GCM Encryption
-    E-->>A: Encrypted Data
-    A->>D: Store Encrypted
-    D-->>A: Storage Confirmed
-    A->>S: Log Security Event
-    S-->>A: Audit Complete
-```
+Used for sensitive user identity fields (`fullNameEncrypted`, `passwordHashEncrypted`, `phoneNumberEncrypted`, `recoveryPhraseEncrypted`) and security audit logs (`security_audit`):
 
-## 🛡️ Runtime Security
+- **Algorithm**: `AES/GCM/NoPadding`
+- **Key Length**: 256 bits
+- **Authentication Tag**: 128 bits
+- **Initialization Vector (IV)**: 12 unique random bytes generated per encryption operation via `SecureRandom`.
+- **Payload Layout**: `[12-byte IV] + [Ciphertext + 16-byte Auth Tag]`, Base64-encoded for database storage.
+- **Keystore Fallback**: Automatically catches `AEADBadTagException` and Keystore invalidation, regenerating versioned keys if hardware credentials are reset.
 
-### Threat Detection System
+---
 
-```mermaid
-graph TB
-    subgraph "🔍 Detection Mechanisms"
-        A[Root Detection<br/>Jailbreak identification]
-        B[Debug Detection<br/>Development tools]
-        C[Emulator Detection<br/>Virtual environment]
-        D[Tamper Detection<br/>Code modification]
-    end
-    
-    subgraph "⚡ Response Actions"
-        E[Immediate Alert<br/>Security notification]
-        F[Data Protection<br/>Encrypt sensitive data]
-        G[Session Termination<br/>Force logout]
-        H[Audit Logging<br/>Security event recording]
-    end
-    
-    subgraph "📊 Monitoring"
-        I[Real-time Scanning<br/>Continuous monitoring]
-        J[Anomaly Detection<br/>Behavioral analysis]
-        K[Threat Assessment<br/>Risk evaluation]
-        L[Response Automation<br/>Automatic protection]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    E --> I
-    F --> J
-    G --> K
-    H --> L
-    
-    classDef detection fill:#e8f5e8
-    classDef response fill:#fff3e0
-    classDef monitoring fill:#e1f5fe
-    
-    class A,B,C,D detection
-    class E,F,G,H response
-    class I,J,K,L monitoring
-```
+## 🔢 Password & Recovery Hashing (PBKDF2)
 
-### Security Check Flow
+### Class: `AndroidPasswordHashingService.java`
 
-```mermaid
-sequenceDiagram
-    participant A as App Startup
-    participant S as Security Manager
-    participant D as Device Check
-    participant E as Environment Check
-    participant I as Integrity Check
-    participant L as Audit Logger
-    
-    A->>S: Initialize Security
-    S->>D: Check Root Status
-    D-->>S: Root Status
-    S->>E: Check Debug Mode
-    E-->>S: Debug Status
-    S->>I: Verify App Integrity
-    I-->>S: Integrity Status
-    S->>L: Log Security Check
-    L-->>S: Audit Complete
-    S-->>A: Security Status
-```
+User authentication and account recovery phrase verification use industry-standard password-based key derivation:
 
-## 📊 Security Monitoring
+- **Algorithm**: `PBKDF2WithHmacSHA256`
+- **Iteration Count**: `100,000` iterations (computationally expensive to thwart brute-force cracking)
+- **Salt Generation**: 32 cryptographically random bytes per user account generated via `SecureRandom`.
+- **Key Length**: 256 bits.
+- **Constant-Time Verification**:
+  ```java
+  public boolean verifyPassword(String password, String storedHash, byte[] salt) {
+      byte[] computedHash = hashPasswordBytes(password, salt);
+      byte[] expectedHash = Base64.decode(storedHash, Base64.NO_WRAP);
+      return MessageDigest.isEqual(computedHash, expectedHash); // Prevents timing attacks
+  }
+  ```
 
-### Audit Logging System
+---
 
-```mermaid
-graph TB
-    subgraph "📝 Audit Events"
-        A[Authentication Events<br/>Login/logout attempts]
-        B[Data Access Events<br/>Sensitive data access]
-        C[Security Events<br/>Threat detections]
-        D[System Events<br/>App lifecycle events]
-    end
-    
-    subgraph "🔍 Event Analysis"
-        E[Pattern Recognition<br/>Behavioral analysis]
-        F[Anomaly Detection<br/>Unusual activity]
-        G[Risk Assessment<br/>Threat level evaluation]
-        H[Alert Generation<br/>Security notifications]
-    end
-    
-    subgraph "📊 Reporting"
-        I[Security Dashboard<br/>Real-time monitoring]
-        J[Audit Reports<br/>Compliance reporting]
-        K[Trend Analysis<br/>Historical patterns]
-        L[Incident Response<br/>Automated actions]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    E --> I
-    F --> J
-    G --> K
-    H --> L
-    
-    classDef events fill:#e8f5e8
-    classDef analysis fill:#fff3e0
-    classDef reporting fill:#e1f5fe
-    
-    class A,B,C,D events
-    class E,F,G,H analysis
-    class I,J,K,L reporting
-```
+## ⏱️ Session Security & Lifetime
 
-## 🔐 Database Security
+### Class: `SessionManager.java`
 
-### SQLCipher Implementation with Android Keystore
+- **Storage**: Hardware-backed `EncryptedSharedPreferences` (`app_prefs.xml`).
+- **Inactivity Timeout**: Active sessions automatically expire after **24 hours** of user inactivity.
+- **Biometric Integration**: Utilizes AndroidX `BiometricPrompt` with `BIOMETRIC_STRONG` crypto-object binding.
+- **Sensitive Memory Clearing**: Password buffers and temporary byte arrays are zeroed out (`Arrays.fill(buffer, (byte) 0)`) immediately after hashing.
 
-```mermaid
-graph TB
-    subgraph "🗄️ Database Security"
-        A[SQLCipher 4.5.6+<br/>Full database encryption]
-        B[Dynamic Key Generation<br/>Device-unique keys]
-        C[Android Keystore<br/>Hardware-backed]
-        D[Audit Trail<br/>Security event logging]
-    end
-    
-    subgraph "🔑 Key Management"
-        E[AESEncryptionManager<br/>Master key from keystore]
-        F[Database Passphrase<br/>Generated per device]
-        G[EncryptedSharedPreferences<br/>Session keys]
-        H[Key Rotation<br/>Future support]
-    end
-    
-    subgraph "🛡️ Protection Features"
-        I[Memory Protection<br/>Secure memory wiping]
-        J[No Hard-Coded Keys<br/>Dynamic generation only]
-        K[Proper Migrations<br/>No data loss]
-        L[Transaction Security<br/>ACID compliance]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    E --> I
-    F --> J
-    G --> K
-    H --> L
-    
-    classDef database fill:#e8f5e8
-    classDef keys fill:#f3e5f5
-    classDef protection fill:#fff3e0
-    
-    class A,B,C,D database
-    class E,F,G,H keys
-    class I,J,K,L protection
-```
+---
 
-### Implementation Details
+## 💻 Safe Query Runner Sandbox
 
-**Database Encryption Flow:**
-- Secure passphrase generation handled by `AESEncryptionManager` using Android Keystore for key material
-- Each device gets a unique encryption key
-- Database instance created with secure passphrase via `AppDatabase.getInstance()`
-- Transaction data stored as plain text within the encrypted database
-- Full database file encrypted by SQLCipher
+### Class: `SafeQueryRunner.java`
 
-**Transaction Storage:**
-- Transaction fields (amount, description, notes, location, tags) are stored as **plain text** in the database
-- Database file itself is fully encrypted by SQLCipher
-- No application-level encryption/decryption for transaction data
-- Migration from encrypted to plain text completed in database version 8
+Provides a direct SQL query console while enforcing strict execution boundaries:
+1. **SELECT-Only Enforcement**: Blocks all DDL/DML tokens (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE`, `REPLACE`, `TRUNCATE`, `ATTACH`, `DETACH`).
+2. **Mandatory User Scoping**: Parses the SQL AST and automatically appends `WHERE user_id = ?` (or `AND user_id = ?`) using parameterized escaping to prevent multi-tenant data leaks.
+3. **Strict Row Ceiling**: Imposes an automatic `LIMIT 500` ceiling to safeguard against Out-Of-Memory exceptions.
+4. **Connection Isolation**: Queries run on a read-only database cursor wrapped in autocloseable handlers to guarantee connection cleanup.
 
-**Session Encryption Flow:**
-- Uses `EncryptedSharedPreferences` with `MasterKey` configured for AES256_GCM key scheme
-- Session data stored in encrypted preferences named "expenso_encrypted_session"
-- Uses AES256_SIV for key encryption and AES256_GCM for value encryption
-- Master key securely stored in Android Keystore
+---
+
+## 📝 Runtime Integrity & Audit Logging
+
+### Class: `SecurityAuditLogger.java`
+
+Maintains a tamper-evident audit trail recorded inside the encrypted `security_audit` table:
+- **Tracked Events**:
+  - `AUTH_LOGIN_SUCCESS` / `AUTH_LOGIN_FAILED`
+  - `KEY_GENERATED` / `KEY_ROTATED`
+  - `DATABASE_BACKUP_EXPORTED` / `DATABASE_RESTORED`
+  - `SECURITY_SETTINGS_CHANGED`
+- **Log Payload**: Encrypted using `AESEncryptionManager` to prevent forensic extraction from device backups.
+
+---
 
 ## 🔄 Cryptographic Corruption Recovery
 
-### Two-Tier Recovery Architecture
+To handle hardware Keystore edge cases (such as biometric resets, OS updates, or corrupted preferences):
+1. **Deep Exception Traversal**: `SessionManager` inspects underlying causes for `AEADBadTagException`, `KeyStoreException`, or `GeneralSecurityException`.
+2. **Safe Re-initialization**: If session preferences become irrecoverably corrupted, `SessionManager` wipes corrupted preferences and prompts the user to re-authenticate using their master password or recovery phrase, preventing app boot loops.
+3. **Database Immunity**: Because `DatabaseKeyManager` resides in an independent vault, session preference recovery has zero impact on SQLCipher database integrity.
 
-Expenso implements a comprehensive two-tier recovery strategy to handle cryptographic corruption without data loss:
+---
 
-```mermaid
-graph TB
-    subgraph "Tier 1: Versioned MasterKey Recovery"
-        A[EncryptedSharedPreferences Corruption]
-        B[Deep Exception Chain Traversal]
-        C[Detect AEADBadTagException]
-        D[Delete Corrupted Keyset]
-        E[Rotate MasterKey Alias]
-        F[Create New EncryptedStorage]
-    end
-    
-    subgraph "Tier 2: Database Key Isolation"
-        G[DatabaseKeyManager]
-        H[Isolated Key Storage]
-        I[Plain SharedPreferences]
-        J[Hardware Keystore Protection]
-    end
-    
-    subgraph "Result"
-        K[No Cascading Failures]
-        L[No Silent Data Loss]
-        M[Automatic Recovery]
-    end
-    
-    A --> B --> C --> D --> E --> F
-    F --> M
-    G --> H --> I --> J
-    J --> K
-    D --> L
-    
-    classDef tier1 fill:#e8f5e8
-    classDef tier2 fill:#e1f5fe
-    classDef result fill:#fff3e0
-    
-    class A,B,C,D,E,F tier1
-    class G,H,I,J tier2
-    class K,L,M result
-```
+## ✅ Security Checklist for Developers
 
-### Key Components
-
-#### 1. DatabaseKeyManager
-- **Purpose**: Isolates database encryption key from session recovery mechanisms
-- **Storage**: Plain SharedPreferences (protected by app sandbox)
-- **Benefits**: 
-  - Prevents cascading failures when session preferences are corrupted
-  - Database remains accessible even after session recovery
-  - Zero data loss during cryptographic corruption recovery
-
-#### 2. Versioned MasterKey Recovery
-- **Alias Rotation**: Dynamic alias generation on corruption detection
-- **Deep Exception Traversal**: Searches entire exception chain for corruption indicators
-- **Automatic Retry**: Clears corrupted keyset and creates fresh encryption storage
-- **Alias Isolation**: Unique aliases per recovery to avoid reuse of broken keystore entries
-
-#### 3. Implementation Details
-
-**SessionManager Key Aliases (`master_key_session_*`):**
-- Default alias: "master_key_session_default"
-- On corruption: Dynamic timestamp-based alias (e.g., "master_key_session_1234")
-
-**AESEncryptionManager Key Aliases (`master_key_aes_*`):**
-- Default alias: "master_key_aes_default"
-- On corruption: Timestamp-based alias rotation (e.g., "master_key_aes_5678")
-
-**SecurePreferencesManager Key Aliases (`master_key_secure_*`):**
-- Default alias: "master_key_secure_default"
-- On corruption: Timestamp-based alias (e.g., "master_key_secure_9012")
-- StrongBox fallback: Uses standard key if hardware security module is unavailable
-
-### Recovery Flow
-
-1. **Detection**: Deep exception chain traversal identifies corruption
-2. **Isolation**: Database key remains untouched in isolated storage
-3. **Rotation**: New MasterKey alias created to avoid broken keystore entries
-4. **Recovery**: Corrupted preferences cleared, fresh encrypted storage created
-5. **Continuity**: Application continues with new session, existing database
-
-### Benefits
-
-✅ **Zero Data Loss**: Database key isolation prevents cascading failures  
-✅ **Repeat Failure Prevention**: Unique aliases avoid keystore conflicts  
-✅ **Deep Error Detection**: Handles wrapped exceptions reliably  
-✅ **Automatic Recovery**: User experiences seamless continuation  
-✅ **Hardware Fallback**: StrongBox support with graceful degradation  
-
-## 🚨 Security Incident Response
-
-### Incident Response Flow
-
-```mermaid
-sequenceDiagram
-    participant T as Threat Detection
-    participant S as Security Manager
-    participant A as Alert System
-    participant P as Protection Actions
-    participant L as Audit Logger
-    participant U as User Notification
-    
-    T->>S: Threat Detected
-    S->>A: Generate Alert
-    A->>P: Execute Protection
-    P->>L: Log Incident
-    L->>U: Notify User
-    U-->>S: User Response
-    S->>L: Log Resolution
-```
-
-### Security Levels
-
-```mermaid
-graph TB
-    subgraph "🟢 Security Levels"
-        A[LOW<br/>Normal operation]
-        B[MEDIUM<br/>Suspicious activity]
-        C[HIGH<br/>Potential threat]
-        D[CRITICAL<br/>Active attack]
-    end
-    
-    subgraph "⚡ Response Actions"
-        E[Monitor<br/>Increased logging]
-        F[Alert<br/>User notification]
-        G[Protect<br/>Data encryption]
-        H[Lockdown<br/>App termination]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    classDef levels fill:#e8f5e8
-    classDef actions fill:#fff3e0
-    
-    class A,B,C,D levels
-    class E,F,G,H actions
-```
-
-## 🔒 Privacy Protection
-
-### Data Privacy Measures
-
-```mermaid
-graph TB
-    subgraph "🔐 Privacy Controls"
-        A[Data Minimization<br/>Only necessary data]
-        B[Purpose Limitation<br/>Specific use only]
-        C[Storage Limitation<br/>Temporary storage]
-        D[Access Control<br/>User-only access]
-    end
-    
-    subgraph "🛡️ Protection Mechanisms"
-        E[Local Storage Only<br/>No cloud sync]
-        F[Encryption at Rest<br/>Stored data encryption]
-        G[Encryption in Transit<br/>Memory protection]
-        H[Secure Deletion<br/>Data destruction]
-    end
-    
-    subgraph "📊 User Rights"
-        I[Data Access<br/>View personal data]
-        J[Data Portability<br/>Export capabilities]
-        K[Data Deletion<br/>Complete removal]
-        L[Consent Management<br/>Privacy preferences]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    E --> I
-    F --> J
-    G --> K
-    H --> L
-    
-    classDef privacy fill:#e8f5e8
-    classDef protection fill:#fff3e0
-    classDef rights fill:#e1f5fe
-    
-    class A,B,C,D privacy
-    class E,F,G,H protection
-    class I,J,K,L rights
-```
-
-## 🧪 Security Testing
-
-### Security Test Coverage
-
-```mermaid
-graph TB
-    subgraph "🧪 Security Tests"
-        A[Authentication Tests<br/>Login security]
-        B[Encryption Tests<br/>Data protection]
-        C[Runtime Tests<br/>Threat detection]
-        D[Database Tests<br/>Storage security]
-    end
-    
-    subgraph "🔍 Penetration Tests"
-        E[Vulnerability Scanning<br/>Security assessment]
-        F[Attack Simulation<br/>Threat modeling]
-        G[Social Engineering<br/>User manipulation]
-        H[Physical Security<br/>Device protection]
-    end
-    
-    subgraph "📊 Compliance Tests"
-        I[GDPR Compliance<br/>Privacy regulations]
-        J[SOC 2 Compliance<br/>Security standards]
-        K[ISO 27001<br/>Information security]
-        L[OWASP Testing<br/>Web security]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    E --> I
-    F --> J
-    G --> K
-    H --> L
-    
-    classDef tests fill:#e8f5e8
-    classDef penetration fill:#fff3e0
-    classDef compliance fill:#e1f5fe
-    
-    class A,B,C,D tests
-    class E,F,G,H penetration
-    class I,J,K,L compliance
-```
-
-## 🎯 Security Best Practices
-
-### Implementation Guidelines
-
-1. **Defense in Depth**: Multiple security layers (App → Data → Database → Storage)
-2. **Principle of Least Privilege**: Minimal access rights for all components
-3. **Secure by Default**: Security-first design with no hard-coded secrets
-4. **Regular Security Updates**: Continuous improvement and patching
-5. **User Education**: Security awareness and best practices
-6. **No Destructive Migrations**: Data safety through proper schema changes
-7. **Encrypted Everything**: All sensitive data encrypted at rest and in transit
-
-### Security Metrics
-
-- **Encryption Coverage**: 100% of sensitive data
-- **Hard-Coded Secrets**: 0 (migrated to keystore)
-- **Authentication Success Rate**: >99.9%
-- **Database Migration Safety**: 100% (no destructive fallbacks)
-- **Session Security**: AES-256 encrypted
-- **Data Breach Prevention**: Zero incidents
-
-### Security Checklist
-
-✅ **Database Encryption**: Hardware-backed keystore keys  
-✅ **Session Storage**: EncryptedSharedPreferences with auto-recovery  
-✅ **Build Security**: External credential management  
-✅ **Memory Leaks**: Proper cleanup implemented  
-✅ **ProGuard Rules**: Configured for security  
-✅ **Manifest Cleanup**: No broken references  
-✅ **Cryptographic Corruption Handling**: Deep exception chain traversal  
-✅ **Session Token Generation**: UUID-based globally unique tokens  
-✅ **Critical Data Persistence**: commit() for immediate writes  
-✅ **Versioned MasterKey Recovery**: Dynamic alias rotation prevents repeat failures  
-✅ **Database Key Isolation**: DatabaseKeyManager prevents cascading data loss  
-✅ **Two-Tier Recovery Strategy**: Session and DB keys decoupled
-
-## 🚀 Future Security Enhancements
-
-### Planned Security Features
-
-1. **Complete Biometric Implementation**: Replace simulated with real BiometricPrompt
-2. **Certificate Pinning**: Network security for API calls
-3. **Advanced Threat Detection**: AI-powered security monitoring
-4. **Zero-Trust Architecture**: Continuous verification
-5. **Quantum-Safe Encryption**: Future-proof cryptography
-6. **Behavioral Analytics**: User pattern analysis
-7. **Automated Security Response**: AI-driven incident response
-8. **Two-Factor Authentication**: Additional security layer
-9. **Security Audit Dashboard**: Real-time monitoring UI
-10. **Tamper Detection**: Code integrity verification
-
-### Security Maintenance
-
-**Regular Tasks:**
-- Quarterly security audits
-- Dependency vulnerability scans
-- ProGuard rule updates
-- Key rotation procedures
-- Penetration testing
-- Security training
-
-### Reporting Security Issues
-
-If you discover a security vulnerability, please report it responsibly:
-- **Do NOT** open a public GitHub issue
-- Email security concerns to: security@expenso.app
-- Include detailed reproduction steps
-- Allow reasonable time for fixes before disclosure
+When modifying the Expenso codebase, verify:
+- [ ] No `android.permission.INTERNET` added to `AndroidManifest.xml`.
+- [ ] No raw passwords, recovery phrases, or encryption keys printed in `AppLogger` or Android `Log`.
+- [ ] All password and secret comparisons use `MessageDigest.isEqual()`.
+- [ ] Room migrations never bypass `DatabaseKeyManager`.
+- [ ] Direct queries route exclusively through `SafeQueryRunner`.
+- [ ] Memory-sensitive byte buffers are wiped after use with `Arrays.fill(..., (byte)0)`.
 
 ---
 
 ## 📚 Related Documentation
 
-- **[README.md](../README.md)** - Project overview and technology stack
-- **[FEATURES.md](FEATURES.md)** - Complete feature documentation
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design
-- **[USER_GUIDE.md](USER_GUIDE.md)** - User manual with security setup instructions
-- **[QUERY_RUNNER.md](QUERY_RUNNER.md)** - Query Runner security features
-- **[TERMS_AND_CONDITIONS.md](TERMS_AND_CONDITIONS.md)** - Legal terms and privacy policy
+- **[README.md](../README.md)** - Project overview.
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design and Room v14 schema.
+- **[QUERY_RUNNER.md](QUERY_RUNNER.md)** - Safe query execution guide.
+- **[FEATURES.md](FEATURES.md)** - Detailed feature specifications.

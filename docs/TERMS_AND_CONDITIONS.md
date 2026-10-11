@@ -1,8 +1,8 @@
 # Terms and Conditions
 
-**Last Updated**: Oct 31st 2025
+**Last Updated**: October 2026
 
-**Effective Date**: Oct 31st 2025
+**Effective Date**: October 2026
 
 ---
 
@@ -547,5 +547,5 @@ For information about using the application, please refer to:
 
 ---
 
-**© [2025] [Himanshu Kumar]. All rights reserved. No rights granted except as explicitly stated herein.**
+**© 2026 Himanshu Kumar. All rights reserved. No rights granted except as explicitly stated herein.**
 

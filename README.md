@@ -1,6 +1,15 @@
 # Expenso
 
-> **Modern Android Finance Management App** - 100% Offline, Enterprise-Grade Security
+> **Modern Android Finance Management App** - 100% Offline, Zero-Telemetry, Enterprise-Grade Security
+
+[![Android SDK](https://img.shields.io/badge/Android%20SDK-24%20to%2036-brightgreen.svg)](https://developer.android.com)
+[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
+[![SQLCipher](https://img.shields.io/badge/SQLCipher-4.17.0-blue.svg)](https://www.zetetic.net/sqlcipher/)
+[![Room](https://img.shields.io/badge/Room-2.6.1-blue.svg)](https://developer.android.com/training/data-storage/room)
+[![Coverage](https://img.shields.io/badge/Jacoco%20Coverage-85%25%20Threshold-success.svg)](https://www.jacoco.org)
+[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline-success.svg)](#-privacy-first)
+
+---
 
 ## 📋 Table of Contents
 
@@ -8,469 +17,343 @@
 2. [Architecture](#-architecture)
 3. [Security Architecture](#-security-architecture)
 4. [Technology Stack](#-technology-stack)
-5. [User Experience](#-user-experience)
-6. [Development](#-development)
+5. [User Experience & Navigation](#-user-experience--navigation)
+6. [Development & Project Structure](#-development--project-structure)
 7. [Security Features](#️-security-features)
-8. [Performance](#-performance)
+8. [Performance & Android 15+ Compatibility](#-performance--android-15-compatibility)
 9. [Data Flow](#-data-flow)
-10. [UI/UX Design](#-uiux-design)
-11. [Analytics & Reporting](#-analytics--reporting)
-12. [Configuration](#-configuration)
-13. [Getting Started](#-getting-started)
-14. [Documentation](#-documentation)
-15. [Support](#-support)
+10. [Analytics, Statements & Reminders](#-analytics-statements--reminders)
+11. [Configuration & Backups](#-configuration--backups)
+12. [Getting Started](#-getting-started)
+13. [Documentation Index](#-documentation-index)
+14. [Support](#-support)
 
 ---
 
 ## 🎯 Overview
 
-Expenso is a comprehensive personal finance management application built with modern Android architecture, featuring enterprise-grade security and 100% offline operation.
+**Expenso** is a comprehensive personal finance and expense management application for Android engineered around strict privacy, dual-tier cryptography, and 100% offline autonomy. It requires zero network permissions, communicates with no remote servers, and executes all database queries, financial analytics, statement generation, and data backups entirely on-device.
 
 ### ✨ Key Features
 
-- **🔒 Enterprise Security** - Multi-layer encryption with biometric authentication
-- **📱 Modern UI** - Material Design 3 with adaptive theming
-- **🏗️ Clean Architecture** - MVVM pattern with domain-driven design
-- **💾 100% Offline** - No internet required, all data stored locally
-- **📊 Advanced Analytics** - Comprehensive financial insights and reporting
-- **🛡️ Privacy First** - Your data never leaves your device
+- **🔒 Dual-Tier Security** - SQLCipher 4.17.0 full database page encryption combined with Android Keystore AES-256-GCM.
+- **📱 Material Design 3 UI** - Dynamic theming (Light/Dark/System), custom typography, and edge-to-edge layout.
+- **🏗️ Clean Architecture + MVVM** - Domain-driven design with reactive `TransactionEventBus` and Service Locator (`AppContainer`).
+- **💾 100% Offline & Zero Telemetry** - Absolute privacy; no analytics pings, no cloud sync, and no tracking SDKs.
+- **⏰ Payment Reminder System** - Exact time-sensitive reminders via `AlarmManager` with interactive notification actions (Mark as Paid, Snooze).
+- **📊 Offline Financial Analytics** - In-memory cash flow calculations, savings rates, MoM/YoY trends, and MPAndroidChart visualizations.
+- **📄 Offline PDF Statement Generator** - Multi-page financial statements powered by iText7 with intelligent pagination space budgeting.
+- **🔄 Multi-Table ZIP Backup & Restore** - Complete export/import of all data tables (CSV format packaged with `manifest.json`) supporting Replace and Merge modes.
+- **💻 Safe Query Runner** - Direct SQL console for transactions with AST-based read-only sandboxing, user isolation, and saved query support.
+
+---
 
 ## 🏗️ Architecture
 
-Expenso follows Clean Architecture principles with a modern Android implementation:
+Expenso adheres to **Clean Architecture** principles decoupled into distinct presentation, domain, and data layers:
 
 ```mermaid
-graph TB
-    subgraph "📱 Presentation Layer"
-        A[DashboardActivity<br/>Launcher & Navigation Host]
-        B[Fragments<br/>UI Components]
-        C[ViewModels<br/>MVVM Pattern]
-        D[Adapters<br/>RecyclerView]
+flowchart TD
+    subgraph Presentation_Layer["📱 Presentation Layer"]
+        A["DashboardActivity<br/>Launcher & Overview Host"]
+        B["Activities & DialogFragments<br/>Transactions, Budgets, Reminders, Analytics"]
+        C["ViewModels<br/>Lifecycle-Aware State & LiveData"]
+        D["Adapters<br/>RecyclerView with DiffUtil"]
     end
     
-    subgraph "🔧 Domain Layer"
-        E[Entities<br/>Business Models]
-        F[Use Cases<br/>Business Logic]
-        G[Repositories<br/>Interfaces]
-        H[Value Objects<br/>Money, etc.]
+    subgraph Domain_Layer["🔧 Domain Layer"]
+        E["Domain Models<br/>Budget, DomainTransaction, Money, User"]
+        F["Use Cases<br/>ComputeBudgetSpendingUseCase, StatementGeneratorUseCase"]
+        G["Domain Services<br/>RecurrenceEngine, AuthenticationService"]
+        H["Repository Interfaces<br/>TransactionRepository, BudgetRepository, UserRepository"]
     end
     
-    subgraph "💾 Data Layer"
-        I[Repositories<br/>Implementations]
-        J[SQLCipher DB<br/>Encrypted Storage]
-        K[DAOs<br/>Data Access]
-        L[Security<br/>Encryption]
+    subgraph Data_Layer["💾 Data Layer"]
+        I["Repository Implementations<br/>TransactionSecureRepository, BudgetRepository, ReminderManager"]
+        J["Room AppDatabase v14<br/>Encrypted by SQLCipher 4.17.0"]
+        K["Room DAOs<br/>11 Data Access Objects"]
+        L["Local Storage & SAF<br/>CentralizedFileLocationManager"]
+    end
+
+    subgraph Security_Subsystem["🛡️ Security Subsystem"]
+        M["DatabaseKeyManager<br/>Isolated 64-char Hex Passphrase"]
+        N["AESEncryptionManager<br/>Keystore AES-256-GCM"]
+        O["AndroidPasswordHashingService<br/>PBKDF2-HMAC-SHA256"]
+        P["SessionManager<br/>EncryptedSharedPreferences"]
     end
     
     A --> B
     B --> C
     C --> F
-    F --> G
-    G --> I
+    F --> H
+    H --> I
     I --> J
     J --> K
     I --> L
-    
-    classDef presentation fill:#e1f5fe
-    classDef domain fill:#f3e5f5
-    classDef data fill:#e8f5e8
-    
-    class A,B,C,D presentation
-    class E,F,G,H domain
-    class I,J,K,L data
+    J -.->|Passphrase| M
+    I -.->|Column Encryption| N
+    C -.->|Auth Verification| O
+    A -.->|Session Check| P
 ```
+
+---
 
 ## 🔒 Security Architecture
 
-Multi-layer security implementation ensuring enterprise-grade protection:
+Expenso isolates cryptographic keys and user secrets to prevent cascading failures:
 
 ```mermaid
-graph TD
-    subgraph "🛡️ Security Layers"
-        A[Application Security<br/>Code Obfuscation]
-        B[Authentication<br/>Biometric + PIN]
-        C[Data Encryption<br/>AES-256-GCM]
-        D[Database Security<br/>SQLCipher]
-        E[Storage Security<br/>Android Keystore]
+flowchart TD
+    subgraph Keystore_Layer["🛡️ Android Hardware Keystore"]
+        MK["MasterKey: expenso_master_key"]
+        DMK["DB MasterKey: expenso_db_master_key"]
     end
-    
-    subgraph "🔍 Runtime Protection"
-        F[Root Detection]
-        G[Debug Detection]
-        H[Emulator Detection]
-        I[App Integrity]
-        J[Memory Protection]
+
+    subgraph Credential_Storage["🔐 Isolated Credential Storage"]
+        ESP["EncryptedSharedPreferences: app_prefs.xml"]
+        DESP["DatabaseKeyManager Isolated Prefs: expenso_db_key_prefs.xml"]
     end
-    
-    subgraph "📊 Security Monitoring"
-        K[Audit Logging]
-        L[Threat Detection]
-        M[Session Management]
-        N[Access Control]
+
+    subgraph Encryption_Engines["⚙️ Encryption Engines"]
+        AES["AESEncryptionManager: AES-256-GCM<br/>Personal Data & Audit Logs"]
+        SQLC["SQLCipher 4.17.0: AES-256-CBC<br/>Database File: expenso_secure.db"]
+        PBKDF2["AndroidPasswordHashingService<br/>PBKDF2-HMAC-SHA256 100k Iters"]
     end
-    
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    
-    F --> K
-    G --> K
-    H --> K
-    I --> K
-    J --> K
-    
-    K --> L
-    L --> M
-    M --> N
-    
-    classDef security fill:#ffebee
-    classDef protection fill:#e3f2fd
-    classDef monitoring fill:#f1f8e9
-    
-    class A,B,C,D,E security
-    class F,G,H,I,J protection
-    class K,L,M,N monitoring
+
+    subgraph Guardrails_Sandbox["🔍 Guardrails & Sandbox"]
+        SQR["SafeQueryRunner<br/>Read-Only AST Validation & Limit 500"]
+        SESS["SessionManager<br/>24-Hour Inactivity Timeout"]
+    end
+
+    MK -->|Secures| ESP
+    DMK -->|Secures| DESP
+    ESP -->|Supplies Session| AES
+    DESP -->|Supplies DB Key| SQLC
+    PBKDF2 -->|Authenticates| ESP
+    SQLC -->|Queried Safely| SQR
+    ESP -->|Monitored By| SESS
 ```
+
+---
 
 ## 🚀 Technology Stack
 
 ### Core Technologies
-- **Language**: Java 17 (100%)
-- **Architecture**: Clean Architecture + MVVM
-- **Database**: SQLCipher 4.5.6+ (Encrypted Room Database)
-- **UI**: Material Design 3 with adaptive theming
-- **Navigation**: Activity-based navigation with Intent routing
-- **Security**: Multi-layer encryption (AES-256-GCM + Android Keystore)
-- **Threading**: AppExecutorService for background operations
-- **State Management**: LiveData with ViewModels
+- **Language**: Java 17 (100% core logic with Kotlin for test helpers/build scripts)
+- **Android SDK**: `compileSdk = 36`, `targetSdk = 36`, `minSdk = 24` (Android 7.0+)
+- **Build System**: Gradle 8.11.1 with Android Gradle Plugin 8.9.0
+- **Database**: Room `2.6.1` + SQLCipher `4.17.0` (Current DB Version: `14`)
+- **Native Support**: 16KB memory page alignment (`armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`)
+- **Coverage Requirement**: Jacoco `0.8.11` enforcing **85% line coverage minimum**
 
 ### Key Libraries
-- **Room Database** with SQLCipher 4.5.4 encryption
-- **Material Design 3** (com.google.android.material)
-- **Android Security Crypto** (EncryptedSharedPreferences)
-- **BiometricPrompt** for authentication
-- **Argon2** for password hashing
-- **iText7** for PDF report generation
-- **MPAndroidChart** for financial charts and visualizations
-- **WorkManager** for scheduled backup operations
+- **SQLCipher for Android** (`net.zetetic:sqlcipher-android:4.17.0`)
+- **AndroidX Security Crypto** (`androidx.security:security-crypto:1.1.0-alpha06`)
+- **AndroidX Biometric** (`androidx.biometric:biometric:1.1.0`)
+- **AndroidX WorkManager** (`androidx.work:work-runtime:2.9.0`)
+- **iText7 Core** (`com.itextpdf:itext7-core:8.0.5`)
+- **MPAndroidChart** (`com.github.PhilJay:MPAndroidChart:v3.1.0`)
+- **Google Play App Update** (`com.google.android.play:app-update:2.1.0`)
 
-## 📱 User Experience
+---
 
-### Navigation Flow
+## 📱 User Experience & Navigation
+
 ```mermaid
 graph LR
-    A[Authentication] --> B[Dashboard]
-    B --> C[Transactions]
-    B --> D[Budgets]
-    B --> E[Analytics]
-    B --> F[Settings]
+    Auth[AuthenticationActivity] --> Dash[DashboardActivity]
+    Dash --> Txn[TransactionsActivity]
+    Dash --> Bud[BudgetsActivity]
+    Dash --> Rem[RemindersActivity]
+    Dash --> Ana[AnalyticsActivity]
+    Dash --> Stmt[StatementActivity]
+    Dash --> Backup[DataBackupActivity]
+    Dash --> Set[SettingsActivity]
+    Dash --> Query[SecureQueryRunnerActivity]
     
-    C --> G[Add Transaction]
-    C --> H[Transaction Details]
-    D --> I[Create Budget]
-    E --> J[Reports]
-    
-    classDef auth fill:#ffcdd2
-    classDef main fill:#c8e6c9
-    classDef detail fill:#fff3e0
-    
-    class A auth
-    class B,C,D,E,F main
-    class G,H,I,J detail
+    Txn --> TxnDetail[TransactionDetailsActivity]
+    Rem --> RemAction[ReminderActionsBottomSheet]
+    Set --> FileLoc[FileLocationSettingsActivity]
+    Set --> Conf[ConfigurationActivity]
+    Set --> Prof[ProfileActivity]
+    Query --> SavedQ[SavedQueriesAdapter]
 ```
 
-### Key User Flows
-1. **Authentication** - Biometric or PIN-based login
-2. **Dashboard** - Financial overview and quick actions
-3. **Transaction Management** - Add, edit, categorize transactions
-4. **Budget Tracking** - Set and monitor spending limits
-5. **Analytics** - Comprehensive financial insights
-6. **Data Backup & Restore** - Manual and automatic backup operations
-7. **Data Export** - PDF/CSV reports for external use
-8. **Configuration** - System settings and category management
+### Complete Activity Navigation Matrix:
+1. **[`DashboardActivity`](docs/USER_GUIDE.md#dashboard)** - Launcher host, financial cards, quick actions, recent entries, shimmer loading.
+2. **[`TransactionsActivity`](docs/USER_GUIDE.md#managing-transactions)** - Paginated transactions, search, date range, swipe actions.
+3. **[`BudgetsActivity`](docs/USER_GUIDE.md#budget-tracking)** - Recurring budget cards, threshold warnings, drag-and-drop ordering, history viewer.
+4. **[`RemindersActivity`](docs/USER_GUIDE.md#payment-reminders)** - Upcoming and historical payment reminder tabs, snooze/paid toggles.
+5. **[`AnalyticsActivity`](docs/USER_GUIDE.md#financial-analytics)** - Interactive cash flow and category distribution charts via MPAndroidChart.
+6. **[`StatementActivity`](docs/USER_GUIDE.md#pdf-statements)** - Multi-page PDF statement generation with date range filters.
+7. **[`DataBackupActivity`](docs/USER_GUIDE.md#data-backup--restore)** - ZIP backup export and merge/replace restoration.
+8. **[`SecureQueryRunnerActivity`](docs/QUERY_RUNNER.md)** - AST-sandboxed SQL query runner with saved query management.
+9. **[`SettingsActivity`](docs/USER_GUIDE.md#settings--configuration)** - Theme picker, currency, biometric authentication, and app preferences.
+10. **[`FileLocationSettingsActivity`](docs/USER_GUIDE.md#file-storage-locations)** - Storage Access Framework (SAF) folder picker.
 
-## 🔧 Development
+---
 
-### Project Structure
+## 🔧 Development & Project Structure
+
 ```
 app/src/main/java/com/offline/expenso/
-├── ExpensoApplication.java         # Application initialization orchestrator
-├── presentation/                   # UI Layer (MVVM Pattern)
-│   ├── ui/activities/             # Activities (Activity-based navigation)
-│   │   ├── DashboardActivity.java # Launcher activity & financial overview
-│   │   ├── TransactionsActivity.java # Transaction management
-│   │   ├── BudgetsActivity.java   # Budget tracking
-│   │   ├── AnalyticsActivity.java # Financial analytics
-│   │   ├── SettingsActivity.java  # App settings
-│   │   ├── AuthenticationActivity.java # User authentication
-│   │   ├── DataBackupActivity.java # Data backup and restore
-│   │   ├── ConfigurationActivity.java # System configuration
-│   │   ├── ProfileActivity.java   # User profile management
-│   │   ├── TransactionDetailsActivity.java # Transaction details view
-│   │   ├── SecureQueryRunnerActivity.java # Secure query execution
-│   │   └── AllActivitiesActivity.java # Activity grid view
-│   ├── ui/fragments/              # Dialog fragments for data entry
-│   ├── ui/viewmodels/             # ViewModels with LiveData
-│   ├── ui/adapters/               # RecyclerView Adapters
-│   ├── common/                    # Shared UI utilities
-│   │   ├── base/                  # Base classes
-│   │   ├── error/                 # Error handling
-│   │   └── utils/                 # UI helpers
-│   ├── theming/                   # Theme management
-│   └── navigation/                # Navigation helpers
-├── domain/                         # Business Logic (Clean Architecture)
-│   ├── entities/                  # Domain Models (Business entities)
-│   ├── usecases/                  # Business Use Cases
-│   ├── repositories/              # Repository Interfaces (Contracts)
-│   ├── services/                  # Domain Services
-│   ├── enums/                     # Business Enums
-│   └── value_objects/             # Immutable Value Objects (Money, etc.)
-├── data/                           # Data Layer (Implementation)
-│   ├── local/database/            # Room Database with SQLCipher
-│   │   ├── entities/              # Database entities
-│   │   ├── dao/                   # Data Access Objects
-│   │   └── converters/            # Type converters
-│   ├── local/dao/                 # Additional DAOs
-│   ├── repositories/              # Repository Implementations
-│   ├── mappers/                   # Domain ↔ Data mappers
-│   ├── security/                  # Security components
-│   │   ├── EncryptionManager.java # AES encryption
-│   │   ├── DatabaseKeyManager.java # DB key management
-│   │   ├── SessionManager.java    # Session handling
-│   │   └── AndroidPasswordHashingService.java # Password hashing
-│   ├── backup/                    # Data backup components
-│   │   ├── BackupFileManager.java # Backup file management
-│   │   ├── BackupScheduler.java  # WorkManager scheduling
-│   │   ├── TransactionCsvExporter.java # CSV export
-│   │   ├── TransactionCsvImporter.java # CSV import
-│   │   └── AutoBackupWorker.java  # WorkManager worker
-│   └── analytics/                 # OfflineAnalyticsEngine
-└── core/                           # Shared Components
-    ├── logging/                   # AppLogger
-    ├── security/                  # Security utilities
-    └── threading/                 # AppExecutorService
+├── ExpensoApplication.java                 # Two-phase init orchestrator (CountDownLatch + Executor)
+├── core/                                   # Platform Utilities & Lifecycle Services
+│   ├── logging/AppLogger.java              # Local diagnostic logging
+│   ├── security/BiometricManager.java      # Hardware biometric detection
+│   ├── threading/AppExecutorService.java   # Centralized background thread pools
+│   └── updates/AppUpdateManager.java       # Play Core in-app update checks
+├── data/                                   # Data Layer Implementation
+│   ├── analytics/                          # OfflineAnalyticsEngine
+│   ├── backup/                             # Multi-table ZIP backup/restore system
+│   │   ├── exporters/                      # 8 Table-specific CSV exporters
+│   │   ├── importers/                      # 8 Table-specific CSV importers
+│   │   ├── models/                         # Backup metadata & progress models
+│   │   ├── BackupManager.java              # Backup orchestrator
+│   │   ├── RestoreManager.java             # Restore orchestrator
+│   │   ├── UserIdRemapper.java             # Foreign key collision resolver
+│   │   └── ZipBackupHandler.java           # Archive compressor/extractor
+│   ├── budget/                             # BudgetResetWorker (WorkManager periodic task)
+│   ├── events/                             # TransactionEventBus & TransactionChangeEvent
+│   ├── file/                               # CentralizedFileLocationManager (SAF + App Storage)
+│   ├── local/                              # Room database, entities, DAOs
+│   │   ├── dao/                            # 5 Primary DAOs (Transaction, User, Category, AppSettings, Audit)
+│   │   ├── database/                       # AppDatabase v14, SafeQueryRunner, TransactionMigrationHelper
+│   │   │   ├── dao/                        # 6 Auxiliary DAOs (Budget, BudgetHistory, Reminder, etc.)
+│   │   │   └── entities/                   # 11 Room Entities
+│   │   └── preferences/                    # SecurePreferencesManager
+│   ├── mappers/                            # Domain ↔ Data entity mappers
+│   ├── reminder/                           # RecurrenceEngine, AlarmScheduler, BroadcastReceivers
+│   ├── repositories/                       # 7 Concrete secure repositories
+│   ├── security/                           # AESEncryptionManager, DatabaseKeyManager, SessionManager
+│   └── statement/                          # PdfStatementGenerator, PdfPageEventHandler
+├── domain/                                 # Business Logic & Contracts
+│   ├── entities/                           # Domain models (Budget, Money, DomainTransaction, etc.)
+│   ├── enums/                              # Enums (BudgetPeriod, TransactionType, StatementPeriod)
+│   ├── repositories/                       # Repository interfaces
+│   ├── services/                           # Domain services (Authentication, Registration, Recovery)
+│   ├── usecases/                           # ComputeBudgetSpendingUseCase, StatementGeneratorUseCase
+│   └── value_objects/                      # Immutable value objects
+└── presentation/                           # Presentation Layer (MVVM)
+    ├── common/                             # BaseActivity, BaseViewModel, ErrorHandler, ShimmerManager
+    ├── theming/                            # ThemeManager (Light/Dark/System dynamic theming)
+    └── ui/                                 # 15 Activities, 7 Fragments/Dialogs, 12 Adapters, 10 ViewModels
 ```
 
-### Build Commands
-- **Build the project**: Run `./gradlew build`
-- **Run tests**: Run `./gradlew test`
-- **Generate release APK**: Run `./gradlew assembleRelease`
+### Build & Verification Commands
+- **Assemble Debug APK**: `./gradlew clean assembleDebug`
+- **Execute Unit Tests**: `./gradlew testDebugUnitTest`
+- **Generate Jacoco Report**: `./gradlew jacocoTestReport`
+- **Verify 85% Coverage Gate**: `./gradlew jacocoTestCoverageVerification`
+
+---
 
 ## 🛡️ Security Features
 
 ### Data Protection
-- **SQLCipher Database** with full database-level encryption (transaction data stored as plain text in encrypted database)
-- **AES-256-GCM Encryption** for user credentials and session data
-- **Android Keystore** for secure key storage
-- **Biometric Authentication** with PIN fallback
-- **EncryptedSharedPreferences** for secure session storage
+- **SQLCipher AES-256 Full-Disk Encryption**: All SQLite pages, WAL journals, and temporary files encrypted.
+- **Isolated Key Management**: `DatabaseKeyManager` runs on independent `EncryptedSharedPreferences` backed by its own Keystore alias (`expenso_db_master_key`), completely immune to user preference corruption.
+- **AES-256-GCM**: Column-level encryption for personal identification and security audit records.
+- **PBKDF2-HMAC-SHA256**: 100,000 iterations and 32-byte cryptographically random salt for passwords and recovery phrases.
+- **Safe Query Runner**: AST-sanitized read-only queries with user isolation (`user_id`) and 500-row limit.
 
-### Runtime Security
-- **Root Detection** - Prevents execution on compromised devices
-- **Debug Detection** - Blocks debugging attempts
-- **Emulator Detection** - Prevents analysis in emulated environments
-- **App Integrity Verification** - Ensures app hasn't been tampered with
+---
 
-### Privacy Protection
-- **100% Offline Operation** - No data transmission
-- **Local Data Storage** - All data remains on device
-- **Encrypted Backups** - Secure local backup system
-- **Audit Logging** - Complete security event tracking
+## 📊 Performance & Android 15+ Compatibility
 
-## 📊 Performance
+- **16KB Memory Page Alignment**: Configured NDK packaging for `armeabi-v7a`, `arm64-v8a`, `x86`, and `x86_64` to prevent native crashes on Android 15+ devices.
+- **Two-Phase Asynchronous Cold Start**: `ExpensoApplication` initializes fast UI components synchronously, delegating heavy SQLCipher and Keystore initialization to a background thread synchronized via `CountDownLatch`.
+- **Reactive In-Memory Event Bus**: `TransactionEventBus` notifies active ViewModels of mutations, eliminating unnecessary disk polling.
 
-### Optimization Features
-- **Efficient Database Queries** with proper indexing
-- **Memory Management** with lifecycle-aware components
-- **Background Processing** with ExecutorService
-- **Caching Strategies** for improved performance
-
-### Performance Targets
-- **App Launch**: < 2 seconds
-- **Database Queries**: < 100ms average
-- **UI Animations**: 60 FPS
-- **Memory Usage**: < 100MB peak
+---
 
 ## 🔄 Data Flow
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant F as Fragment
-    participant V as ViewModel
-    participant UC as UseCase
-    participant R as Repository
-    participant DB as Database
-    participant S as Security
+    participant UI as Presentation Layer (Activity/Fragment)
+    participant VM as ViewModel
+    participant UC as Domain UseCase / Engine
+    participant TEB as TransactionEventBus
+    participant R as Secure Repository
+    participant DB as SQLCipher Database (AppDatabase v14)
     
-    U->>F: User Action
-    F->>V: Update UI State
-    V->>UC: Execute Business Logic
-    UC->>R: Repository Call
-    R->>S: Encrypt Data
-    S-->>R: Encrypted Data
-    R->>DB: Store Encrypted
-    DB-->>R: Success
-    R->>S: Decrypt Data
-    S-->>R: Decrypted Data
-    R-->>UC: Domain Entity
-    UC-->>V: Business Result
-    V-->>F: UI Update
-    F-->>U: Display Result
+    UI->>VM: User creates or modifies transaction
+    VM->>R: insertTransaction(entity)
+    R->>DB: Write to SQLite (Encrypted at rest)
+    DB-->>R: Write confirmed
+    R->>TEB: postEvent(TRANSACTION_CREATED)
+    TEB-->>VM: Notify active ViewModels
+    VM-->>UI: LiveData updates UI reactively
 ```
 
-## 🎨 UI/UX Design
+---
 
-### Material Design 3 Implementation
-- **Dynamic Theming** - Light/Dark mode support
-- **Adaptive Colors** - System color integration
-- **Modern Components** - Latest Material Design components
-- **Accessibility** - WCAG 2.1 AA compliance
+## 📈 Analytics, Statements & Reminders
 
-### Navigation Architecture
-- **Single Activity Pattern** - Modern Android approach
-- **Navigation Component** - Type-safe navigation
-- **Deep Linking** - URL-based navigation support
-- **Back Stack Management** - Proper navigation handling
+### Offline Financial Analytics
+Calculated entirely in memory by `OfflineAnalyticsEngine`:
+- Total Income, Total Expenses, Net Savings, and Savings Rate.
+- Category breakdowns formatted for MPAndroidChart.
+- Month-over-Month (MoM) and Year-over-Year (YoY) variance trends.
 
-## 📈 Analytics & Reporting
+### PDF Statement Generation
+Generates formal financial reports offline with iText7:
+- Dynamic space budgeting prevents table headers from being orphaned across page boundaries.
+- Executive summary card, categorized expenditure table, and chronological ledger.
 
-### Financial Insights
-- **Spending Analysis** - Category-wise breakdown
-- **Income Tracking** - Revenue source analysis
-- **Budget Performance** - Goal vs actual spending
-- **Trend Analysis** - Historical data patterns
+### Payment Reminder Engine
+- Schedules exact alarms via `AlarmManager.setExactAndAllowWhileIdle()`.
+- Interactive notifications with direct intent actions:
+  - **Mark as Paid**: Immediately logs an expense transaction and computes next due date via `RecurrenceEngine`.
+  - **Snooze**: Postpones notification without altering base schedule.
 
-### Export Capabilities
-- **PDF Reports** - Professional financial reports
-- **CSV Export** - Data for external analysis
-- **JSON Backup** - Complete data backup
-- **Custom Date Ranges** - Flexible reporting periods
+---
 
-## 🔧 Configuration
+## 🔧 Configuration & Backups
 
-### User Settings
-- **Currency Selection** - Multi-currency support
-- **Theme Preferences** - Light/Dark mode
-- **Security Settings** - Biometric/PIN configuration
-- **Notification Preferences** - Reminder settings
+- **Multi-Table Backup Archive (`.zip`)**: Bundles `transactions.csv`, `budgets.csv`, `payment_reminders.csv`, `configurations.csv`, `categories.csv`, `app_settings.csv`, `budget_history.csv`, `reminder_history.csv`, and `manifest.json`.
+- **Restore Options**:
+  - **Replace**: Wipes current tables and restores from backup.
+  - **Merge**: Safely imports records using `UserIdRemapper` to prevent foreign key collisions.
+- **Storage Access Framework**: User-selected directory permissions persisted via `takePersistableUriPermission`.
 
-### System Configuration
-- **Database Encryption** - Automatic security setup
-- **Backup Scheduling** - Automated data protection
-- **Performance Tuning** - Optimized for device capabilities
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Android Studio**: Hedgehog (2023.1.1) or later
-- **Android SDK**: API 24+ (Android 7.0) minimum, API 35 (Android 15) target
-- **Java**: 17
-- **Gradle**: 8.0+ (included via Gradle Wrapper)
+- **Android Studio**: Ladybug / Koala / Hedgehog or later
+- **Android SDK**: `minSdk = 24`, `targetSdk = 36`
+- **JDK**: Java 17
+- **Gradle**: 8.11.1 (included via `./gradlew`)
 
-### Installation
-1. Clone the repository and navigate to the project directory
-2. Open in Android Studio
-3. Sync project with Gradle files (download dependencies automatically)
-4. Configure signing (optional for debug builds):
-   - Copy `keystore.properties.example` to `keystore.properties`
-   - Fill in your signing credentials (for release builds)
-5. Build and run on device/emulator using `./gradlew installDebug`
-
-### First Run
-1. **App Launch**: Application initializes heavy components asynchronously
-   - Critical components (SessionManager, ThemeManager) initialize synchronously
-   - Database, encryption, and repositories initialize in background
-   - Activities wait for initialization via `InitializationListener` pattern
-2. **User Registration**: Create account with email and password
-   - Password hashed using PBKDF2 with Argon2
-   - User data encrypted before storage
-3. **Authentication Setup**: Choose biometric or PIN authentication
-   - Biometric: Uses Android BiometricPrompt API
-   - PIN: 6-digit secure PIN with pattern detection
-4. **Create First Transaction**: Add income or expense transaction
-   - Supports multiple currencies
-   - Category-based organization
-   - Transaction data fully encrypted
-5. **Explore Features**: 
-   - Dashboard: Financial overview with recent transactions
-   - Analytics: View spending trends and category breakdowns
-   - Budgets: Set and track spending limits
-   - Settings: Configure app preferences and theme
-
-### Application Initialization Flow
-
-The app uses a two-phase initialization strategy to prevent blocking the main thread:
-
-1. **Critical Phase (Synchronous)**:
-   - SessionManager initialization
-   - ThemeManager initialization
-   - Main thread remains responsive
-
-2. **Heavy Phase (Asynchronous)**:
-   - EncryptionManager setup (Android Keystore access)
-   - Database initialization (SQLCipher setup)
-   - Repository instantiation
-   - Service configuration
-   - Runs on background thread pool
-
-Activities use the `InitializationListener` pattern to wait for initialization before accessing repositories, preventing race conditions and `NullPointerException`s.
-
-**Note**: `DashboardActivity` serves as the launcher activity, replacing the previous `MainActivity`. It combines authentication checks, session management, deep link routing, and the dashboard UI in a single activity for improved performance and simplicity.
-
-## 📚 Documentation
-
-Comprehensive documentation is available in the `docs/` directory:
-
-### User Documentation
-- **[User Guide](docs/USER_GUIDE.md)** - Complete user manual with step-by-step instructions
-  - Getting started, authentication, and account setup
-  - Transaction management and categorization
-  - Budget tracking and financial goals
-  - Analytics and reporting features
-  - Data backup and restore procedures
-  - Troubleshooting and FAQs
-
-- **[Query Runner Guide](docs/QUERY_RUNNER.md)** - Advanced SQL query feature documentation
-  - SQL query execution and security
-  - Transaction table schema reference
-  - 30+ sample queries and use cases
-  - Best practices and optimization tips
-
-### Technical Documentation
-- **[Features Documentation](docs/FEATURES.md)** - Detailed feature specifications
-  - Authentication and security features
-  - Transaction and budget management
-  - Analytics and data export capabilities
-  - UI/UX implementation details
-  - Application lifecycle and performance
-
-- **[Architecture Guide](docs/ARCHITECTURE.md)** - System architecture and design
-  - Clean Architecture implementation
-  - Component architecture and data flow
-  - Database schema and relationships
-  - Performance optimization strategies
-  - Application initialization flow
-
-- **[Security Implementation](docs/SECURITY.md)** - Security architecture details
-  - Multi-layer security model
-  - Encryption and key management
-  - Authentication and session management
-  - Runtime protection mechanisms
-  - Cryptographic corruption recovery
-
-### Legal
-- **[Terms and Conditions](docs/TERMS_AND_CONDITIONS.md)** - Application terms of use
-  - User responsibilities and disclaimers
-  - Privacy and data protection
-  - Limitations of liability
-  - Usage restrictions
-
-## 📞 Support
-
-For technical support or feature requests, please refer to the project documentation above or create an issue in the repository.
+### Installation & Run
+1. Clone the repository and open `expenso-android` in Android Studio:
+   ```bash
+   git clone https://github.com/himanshu-kumar-77/expenso-android.git
+   ```
+2. Build and run debug variant:
+   ```bash
+   ./gradlew installDebug
+   ```
 
 ---
 
-**expenso** - Secure, Modern, Offline-First Financial Management
+## 📚 Documentation Index
+
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - Deep dive into Clean Architecture, Room v14 schema, and lifecycle.
+- **[Security Guide](docs/SECURITY.md)** - Cryptographic models, Keystore isolation, and audit logging.
+- **[User Guide](docs/USER_GUIDE.md)** - Comprehensive user manual covering all screens, reminders, and statements.
+- **[Query Runner Guide](docs/QUERY_RUNNER.md)** - SQL sandbox, schema reference, and saved queries.
+- **[Features Documentation](docs/FEATURES.md)** - Exhaustive feature catalog and technical specifications.
+- **[Delete Account & Data](docs/DELETE_ACCOUNT.md)** - Local data wipe and retention policies.
+- **[Terms & Conditions](docs/TERMS_AND_CONDITIONS.md)** - Legal disclaimers and offline usage terms.
+
+---
+
+## 📞 Support
+
+For bug reports or feature suggestions, open an issue in the official GitHub repository.
+
+**Expenso** - Privacy-First, 100% Offline, Zero-Telemetry Android Personal Finance.

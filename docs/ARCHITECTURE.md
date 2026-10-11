@@ -4,737 +4,496 @@
 
 1. [System Architecture Overview](#️-system-architecture-overview)
 2. [Architecture Principles](#-architecture-principles)
-3. [Layer Responsibilities](#-layer-responsibilities)
-4. [Data Flow Architecture](#-data-flow-architecture)
-5. [Component Architecture](#️-component-architecture)
-6. [Database Architecture](#️-database-architecture)
-7. [Security Architecture](#-security-architecture)
-8. [Navigation Architecture](#-navigation-architecture)
-9. [Performance Architecture](#-performance-architecture)
-10. [State Management](#-state-management)
-11. [Testing Architecture](#-testing-architecture)
-12. [Package Structure](#-package-structure)
-13. [Key Architectural Decisions](#-key-architectural-decisions)
-14. [Application Initialization Architecture](#-application-initialization-architecture)
-15. [Scalability Considerations](#-scalability-considerations)
-16. [Related Documentation](#-related-documentation)
+3. [Clean Layer Responsibilities](#-clean-layer-responsibilities)
+4. [Data Flow Architecture & Event Bus](#-data-flow-architecture--event-bus)
+5. [Component & Activity Architecture](#️-component--activity-architecture)
+6. [Database Architecture & Schema (v14)](#️-database-architecture--schema-v14)
+7. [Database Migration History (v1 to v14)](#-database-migration-history-v1-to-v14)
+8. [Security & Cryptography Architecture](#-security--cryptography-architecture)
+9. [Application Lifecycle & Two-Phase Startup](#-application-lifecycle--two-phase-startup)
+10. [Background Scheduling & Workers](#-background-scheduling--workers)
+11. [Package Structure](#-package-structure)
+12. [Performance & Android 15/16 Compatibility](#-performance--android-1516-compatibility)
+13. [Related Documentation](#-related-documentation)
 
 ---
 
 ## 🏗️ System Architecture Overview
 
-Expenso implements a modern Clean Architecture with Android-specific optimizations, ensuring maintainability, testability, and scalability.
+Expenso implements **Clean Architecture** combined with **Model-View-ViewModel (MVVM)**, an asynchronous two-phase initialization lifecycle, and an in-memory reactive event bus (`TransactionEventBus`). It operates strictly **100% offline** with zero remote servers, cloud sync, or external analytics SDKs.
+
+```mermaid
+flowchart TD
+    subgraph Principles["🎯 Architectural Principles"]
+        P1["100% Offline Autonomy"]
+        P2["Dual-Tier Cryptography"]
+        P3["Layer Separation & Inversion"]
+        P4["Reactive Mutation Propagation"]
+    end
+    
+    subgraph Presentation_Layer["📱 Presentation Layer"]
+        A["15 Android Activities"]
+        B["10 AndroidX ViewModels"]
+        C["Dialogs & BottomSheets"]
+        D["RecyclerView Adapters"]
+    end
+    
+    subgraph Domain_Layer["🔧 Domain Layer"]
+        E["Pure Domain Entities"]
+        F["Domain Use Cases"]
+        G["Repository Interfaces"]
+        H["Domain Services & Engines"]
+    end
+    
+    subgraph Data_Layer["💾 Data Layer"]
+        I["Secure Repositories"]
+        J["SQLCipher 4.17.0 DB expenso_secure.db"]
+        K["11 Room DAOs"]
+        L["Multi-Table Backup & Restore Engine"]
+        M["CentralizedFileLocationManager SAF"]
+    end
+    
+    P1 --> P2
+    P2 --> P3
+    P3 --> P4
+    
+    A --> B
+    B --> F
+    F --> G
+    G --> I
+    I --> J
+    J --> K
+    I --> L
+    I --> M
+```
+
+---
 
 ## 📐 Architecture Principles
 
-### Clean Architecture Layers
+1. **Strict Offline Independence**: No `INTERNET` permission in `AndroidManifest.xml`. All data processing, storage, analytics, and PDF generation execute locally on device.
+2. **Dual-Tier Hardware-Backed Security**: SQLCipher 4.17.0 encrypts SQLite database pages on disk. Sensitive user profile credentials and security audit records use AES-256-GCM backed by Android Hardware Keystore (`AndroidKeyStore`).
+3. **Decoupled Key Management**: `DatabaseKeyManager` maintains the SQLCipher passphrase in an isolated storage file (`expenso_db_key_prefs`) backed by its own dedicated MasterKey (`expenso_db_master_key`), preventing user preference resets from corrupting database accessibility.
+4. **Reactive Mutation Propagation**: When repositories insert, update, or delete data, they notify `TransactionEventBus`. ViewModels observe this bus and update their `LiveData` reactively without continuous disk polling.
+5. **Deterministic Two-Phase Startup**: Cold starts are divided into a fast synchronous path on the main thread and a heavy asynchronous path on a background thread pool, synchronized via `CountDownLatch` and `InitializationListener`.
 
-```mermaid
-graph TB
-    subgraph "🎯 Core Principles"
-        A[Independence]
-        B[Testability]
-        C[Maintainability]
-        D[Scalability]
-    end
-    
-    subgraph "📱 Presentation Layer"
-        E[Activities & Fragments]
-        F[ViewModels]
-        G[UI Components]
-        H[Navigation]
-    end
-    
-    subgraph "🔧 Domain Layer"
-        I[Entities]
-        J[Use Cases]
-        K[Repository Interfaces]
-        L[Business Rules]
-    end
-    
-    subgraph "💾 Data Layer"
-        M[Repository Implementations]
-        N[Database]
-        O[External APIs]
-        P[Local Storage]
-    end
-    
-    A --> B
-    B --> C
-    C --> D
-    
-    E --> F
-    F --> G
-    G --> H
-    
-    I --> J
-    J --> K
-    K --> L
-    
-    M --> N
-    N --> O
-    O --> P
-    
-    classDef principles fill:#e8f5e8
-    classDef presentation fill:#e1f5fe
-    classDef domain fill:#f3e5f5
-    classDef data fill:#fff3e0
-    
-    class A,B,C,D principles
-    class E,F,G,H presentation
-    class I,J,K,L domain
-    class M,N,O,P data
-```
+---
 
-## 🎯 Layer Responsibilities
+## 🎯 Clean Layer Responsibilities
 
-### Presentation Layer
-- **UI Components**: Activities, Fragments, Custom Views
-- **State Management**: ViewModels with LiveData
-- **User Interaction**: Event handling and navigation
-- **Data Binding**: UI to data synchronization
+### 1. Presentation Layer (`com.offline.expenso.presentation`)
+- **Activities & Dialogs**: Render UI, handle user touch events, and observe ViewModels.
+- **ViewModels**: Extend `BaseViewModel`, encapsulate UI state within private `MutableLiveData`, and expose read-only `LiveData`.
+- **Adapters**: Bind datasets to Material Design 3 `RecyclerView` components using `DiffUtil` for smooth 60 FPS transitions.
+- **Theming**: `ThemeManager` applies Light, Dark, or System themes before layout inflation.
 
-### Domain Layer
-- **Business Logic**: Use cases and business rules
-- **Entities**: Core business models
-- **Repository Interfaces**: Data access contracts
-- **Value Objects**: Immutable domain concepts
+### 2. Domain Layer (`com.offline.expenso.domain`)
+- **Entities**: Clean business models (`Budget`, `BudgetHistory`, `DomainTransaction`, `Money`, `User`, `Category`, `Configuration`, `PasswordResetToken`, `RecoveryPhrase`, `StatementData`).
+- **Use Cases**: Encapsulate single business actions (`ComputeBudgetSpendingUseCase`, `StatementGeneratorUseCase`).
+- **Domain Services**: Business rules including `RecurrenceEngine` (due date arithmetic), `AuthenticationService`, `PasswordResetService`, `RecoveryPhraseService`, and `ConfigurationValidationService`.
+- **Repository Contracts**: Pure interfaces defining data requirements without framework dependencies (`TransactionRepository`, `BudgetRepository`, `UserRepository`).
 
-### Data Layer
-- **Repository Implementations**: Data access logic
-- **Database**: SQLCipher encrypted storage
-- **Security**: Encryption and authentication
-- **Local Storage**: File and preference management
+### 3. Data Layer (`com.offline.expenso.data`)
+- **Repositories**: Coordinate between Room DAOs, local preferences, and cryptography (`TransactionSecureRepository`, `BudgetRepository`, `UserSecureRepository`, `PaymentReminderRepository`, etc.).
+- **Persistence (`AppDatabase`)**: Room database encrypted by SQLCipher 4.17.0. Current version: 14.
+- **Backup & Restore**: Multi-table CSV export and import into compressed `.zip` archives with foreign-key collision resolution (`UserIdRemapper`).
+- **File Management**: `CentralizedFileLocationManager` handles Storage Access Framework (SAF) tree URIs with fallback to app-scoped document directories.
 
-## 🔄 Data Flow Architecture
+---
+
+## 🔄 Data Flow Architecture & Event Bus
+
+Mutations follow a clean unidirectional data flow:
 
 ```mermaid
 sequenceDiagram
-    participant UI as Presentation Layer
+    participant View as Activity / Fragment
     participant VM as ViewModel
-    participant UC as Use Case
-    participant REPO as Repository
-    participant DB as Database
-    participant SEC as Security Layer
-    
-    UI->>VM: User Action
-    VM->>UC: Execute Business Logic
-    UC->>REPO: Data Request
-    REPO->>SEC: Encrypt Sensitive Data
-    SEC-->>REPO: Encrypted Data
-    REPO->>DB: Store Data
-    DB-->>REPO: Success Response
-    REPO->>SEC: Decrypt Data
-    SEC-->>REPO: Decrypted Data
-    REPO-->>UC: Domain Entity
-    UC-->>VM: Business Result
-    VM-->>UI: UI State Update
+    participant UC as Domain Use Case
+    participant Repo as Secure Repository
+    participant Bus as TransactionEventBus
+    participant DB as AppDatabase (SQLCipher)
+
+    View->>VM: User initiates action (e.g. Save Expense)
+    VM->>UC: Execute business logic
+    UC->>Repo: insertTransaction(DomainTransaction)
+    Repo->>DB: Room DAO insert (Encrypted at rest)
+    DB-->>Repo: Insert successful
+    Repo->>Bus: postEvent(TRANSACTION_CREATED)
+    Bus-->>VM: Notify active observer ViewModels
+    VM-->>View: LiveData emits updated state
+    View-->>View: UI re-renders with new entry
 ```
 
-## 🏛️ Component Architecture
+---
 
-### Main Components
+## 🏛️ Component & Activity Architecture
+
+Expenso employs an activity-based navigation architecture where [`DashboardActivity`](file:///d:/Projects/expenso/expenso-android/app/src/main/java/com/offline/expenso/presentation/ui/activities/DashboardActivity.java) acts as the launcher and primary host:
 
 ```mermaid
-graph TB
-    subgraph "📱 DashboardActivity (Launcher)"
-        A[Authentication Check]
-        B[Deep Link Handler]
-        C[Theme Manager]
-        D[Session Manager]
-        E[Dashboard UI]
+flowchart TB
+    subgraph Launcher_Host["🚀 Launcher & Host"]
+        Dash["DashboardActivity<br/>Session Verification & Financial Overview"]
     end
-    
-    subgraph "🧩 Core Activities"
-        F[TransactionsActivity]
-        G[BudgetsActivity]
-        H[AnalyticsActivity]
-        I[SettingsActivity]
-        J[AuthenticationActivity]
-        K[DataBackupActivity]
-        L[ConfigurationActivity]
-        M[ProfileActivity]
-        N[TransactionDetailsActivity]
+
+    subgraph Core_Activities["💳 Core Financial Activities"]
+        Txn["TransactionsActivity"]
+        TxnDet["TransactionDetailsActivity"]
+        Bud["BudgetsActivity"]
+        Rem["RemindersActivity"]
+        Ana["AnalyticsActivity"]
+        Stmt["StatementActivity"]
     end
-    
-    subgraph "💬 Dialogs"
-        O[AddTransactionDialog]
-        P[EditTransactionDialog]
-        Q[CreateBudgetDialog]
+
+    subgraph Management_Activities["⚙️ Management & Utility Activities"]
+        Auth["AuthenticationActivity"]
+        Prof["ProfileActivity"]
+        Conf["ConfigurationActivity"]
+        Back["DataBackupActivity"]
+        Set["SettingsActivity"]
+        FileLoc["FileLocationSettingsActivity"]
+        Query["SecureQueryRunnerActivity"]
+        AllAct["AllActivitiesActivity"]
     end
+
+    Dash --> Txn
+    Txn --> TxnDet
+    Dash --> Bud
+    Dash --> Rem
+    Dash --> Ana
+    Dash --> Stmt
+    Dash --> Back
+    Dash --> Set
+    Dash --> Query
+    Dash --> AllAct
     
-    subgraph "🔧 ViewModels"
-        N[DashboardViewModel]
-        O[TransactionViewModel]
-        P[BudgetViewModel]
-        Q[AnalyticsViewModel]
-        R[AuthenticationViewModel]
-    end
-    
-    A --> F
-    B --> G
-    C --> H
-    D --> I
-    E --> N
-    
-    E --> O
-    F --> P
-    G --> Q
-    
-    E --> N
-    F --> O
-    G --> P
-    H --> Q
-    I --> R
-    J --> N
-    
-    classDef activity fill:#ff9800
-    classDef core fill:#4caf50
-    classDef dialog fill:#9c27b0
-    classDef viewmodel fill:#2196f3
-    
-    class A,B,C,D,E activity
-    class F,G,H,I,J,K,L,M,N core
-    class O,P,Q dialog
-    class N,O,P,Q,R viewmodel
+    Set --> Prof
+    Set --> Conf
+    Set --> FileLoc
+    Dash -.->|Unauthenticated| Auth
 ```
 
-## 🗄️ Database Architecture
+---
 
-### SQLCipher Database Structure
+## 🗄️ Database Architecture & Schema (v14)
+
+- **Database Engine**: Room 2.6.1 + SQLCipher 4.17.0 (AES-256-CBC)
+- **Database File**: `expenso_secure.db`
+- **Schema Location**: `app/schemas/com.offline.expenso.data.local.database.AppDatabase/`
+
+### Complete Entity-Relationship Model
 
 ```mermaid
 erDiagram
-    USERS ||--o{ TRANSACTIONS : has
-    USERS ||--o{ CATEGORIES : owns
-    USERS ||--o{ BUDGETS : creates
-    USERS ||--o{ REMINDERS : sets
-    CATEGORIES ||--o{ TRANSACTIONS : categorizes
-    CATEGORIES ||--o{ BUDGETS : tracks
-    
-    USERS {
+    users ||--o{ transactions : "owns"
+    users ||--o{ budgets : "sets"
+    users ||--o{ payment_reminders : "schedules"
+    users ||--o{ saved_queries : "saves"
+    budgets ||--o{ budget_history : "archives"
+    payment_reminders ||--o{ reminder_history : "logs"
+
+    users {
         string id PK
-        string name_encrypted
-        string email_encrypted
-        string password_hash
-        string passbook_id UK
-        timestamp created_at
+        string email UK
+        string fullNameEncrypted
+        string passwordHashEncrypted
+        string phoneNumberEncrypted
+        long dateOfBirth
+        string profilePictureUrlEncrypted
+        boolean isEmailVerified
+        boolean isPhoneVerified
+        boolean isBiometricEnabled
+        string preferredCurrency
+        string currency_symbol
+        string preferredLanguage
+        long createdAt
+        long updatedAt
+        long lastLoginAt
+        boolean isActive
+        string recoveryPhraseHashEncrypted
+        string recoveryPhraseEncrypted
     }
-    
-    TRANSACTIONS {
+
+    transactions {
         string id PK
+        string user_id FK
         string amount
+        string currency_code
+        string exchange_rate
         string type
-        string category_id FK
+        string category_id
+        string subcategory
         string description
-        string passbook_id FK
-        timestamp transaction_date
-        timestamp created_at
+        string notes
+        long transaction_date
+        long transaction_time
+        string account_name
+        string payment_method
+        string reference_number
+        string location
+        string tags
+        boolean is_recurring
+        string recurring_pattern
+        string receipt_image_path
+        boolean is_tax_deductible
+        long created_at
+        long updated_at
+        boolean is_deleted
+        int version
     }
-    
-    CATEGORIES {
+
+    budgets {
         string id PK
+        string user_id
         string name
-        string type
-        string passbook_id FK
-        boolean is_default
+        string description
+        string category_id
+        string category_name
+        string budget_amount
+        string spent_amount
+        string period
+        string start_date
+        string end_date
+        string status
+        boolean is_active
+        boolean is_recurring
+        long created_at
+        long updated_at
     }
-    
-    BUDGETS {
+
+    budget_history {
         string id PK
-        string name
-        string amount_encrypted
-        string category_id FK
-        string passbook_id FK
-        timestamp start_date
-        timestamp end_date
+        string budget_id
+        string user_id
+        string budget_name
+        string category_id
+        string category_name
+        string period
+        string period_start_date
+        string period_end_date
+        string budgeted_amount
+        string spent_amount
+        string remaining_amount
+        double spent_percentage
+        string final_status
+        long created_at
     }
-    
-    REMINDERS {
+
+    payment_reminders {
         string id PK
+        string user_id FK
         string title
-        string description_encrypted
-        string passbook_id FK
-        timestamp due_date
-        string frequency
+        string category
+        string amount
+        string currency_code
+        long due_date
+        string due_time
+        string repeat_type
+        int repeat_interval
+        string repeat_unit
+        long next_due_date
+        long notification_time
+        boolean notification_enabled
+        int notification_id
+        string status
+        boolean is_active
+        long snooze_until
+        string notes
+        string payment_method
+        boolean auto_create_transaction
+        long created_at
+        long updated_at
+        long last_notified_at
+        int completion_count
+    }
+
+    reminder_history {
+        string id PK
+        string user_id FK
+        string reminder_id FK
+        string transaction_id FK
+        string title
+        string category
+        string amount
+        string currency_code
+        string payment_method
+        long original_due_date
+        long paid_date
+        string status
+        int days_overdue
+        string notes
+        string remarks
+        string actual_amount_paid
+        long created_at
+        boolean was_recurring
+        int occurrence_number
+    }
+
+    configurations {
+        string id PK
+        string display_name
+        string configuration_type
+        int position
+        long created_at
+        long updated_at
+        string created_by
+    }
+
+    saved_queries {
+        string id PK
+        string user_id FK
+        string title
+        string sql_query
+        boolean is_predefined
+        long created_at
     }
 ```
 
-## 🔐 Security Architecture
+---
 
-### Multi-Layer Security Model
+## 📜 Database Migration History (v1 to v14)
 
-```mermaid
-graph TD
-    subgraph "🛡️ Security Layers"
-        A[Application Layer<br/>Code Obfuscation]
-        B[Authentication Layer<br/>Biometric + PIN]
-        C[Data Encryption Layer<br/>AES-256-GCM]
-        D[Database Layer<br/>SQLCipher]
-        E[Storage Layer<br/>Android Keystore]
-    end
-    
-    subgraph "🔍 Runtime Protection"
-        F[Root Detection]
-        G[Debug Detection]
-        H[Emulator Detection]
-        I[App Integrity Check]
-        J[Memory Protection]
-    end
-    
-    subgraph "📊 Security Monitoring"
-        K[Audit Logging]
-        L[Threat Detection]
-        M[Session Management]
-        N[Access Control]
-    end
-    
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    
-    F --> K
-    G --> K
-    H --> K
-    I --> K
-    J --> K
-    
-    K --> L
-    L --> M
-    M --> N
-    
-    classDef security fill:#ffebee
-    classDef protection fill:#e3f2fd
-    classDef monitoring fill:#f1f8e9
-    
-    class A,B,C,D,E security
-    class F,G,H,I,J protection
-    class K,L,M,N monitoring
-```
+| Migration | Versions | Core Changes |
+| :--- | :--- | :--- |
+| `MIGRATION_5_6` | 5 → 6 | Added `recoveryPhraseHashEncrypted` and `recoveryPhraseEncrypted` to `users`. |
+| `MIGRATION_6_7` | 6 → 7 | Created `budgets` table with recurring spending attributes. |
+| **`MIGRATION_7_8`** | **7 → 8** | **Major Architecture Refactor**: Prior to version 8, transactions used individual column AES encryption (`amount_encrypted`, `description_encrypted`, `notes_encrypted`, etc.). This prevented SQLite index lookups, sorting, filtering, and aggregate queries. Because SQLCipher already transparently encrypts the entire SQLite database file at rest with page-level AES-256, column encryption on transactions was redundant and harmful. Migration 7→8 safely decrypted all records and recreated `transactions` with plain typed columns. |
+| `MIGRATION_8_9` | 8 → 9 | Added `is_recurring` to `budgets` and created `budget_history` for archived period snapshots. |
+| `MIGRATION_9_10` | 9 → 10 | Added composite indices to `configurations` table for faster type lookup. |
+| `MIGRATION_10_11` | 10 → 11 | Created `payment_reminders` and `reminder_history` tables for bill alerts. |
+| `MIGRATION_11_12` | 11 → 12 | Simplified `configurations` schema (reduced redundant columns), mapped `currency_symbol` directly into `users` (`₹`, `$`, `€`, `£`, `¥`, etc.). |
+| `MIGRATION_12_13` | 12 → 13 | Added `position INTEGER NOT NULL DEFAULT 0` to `configurations` for drag-and-drop category ordering. |
+| `MIGRATION_13_14` | 13 → 14 | Created `saved_queries` table for Query Runner persistence. |
 
-## 🧭 Navigation Architecture
+---
 
-### Activity-Based Navigation
+## 🔐 Security & Cryptography Architecture
 
 ```mermaid
-graph TB
-    subgraph "📱 DashboardActivity (Launcher)"
-        A[Auth Check]
-        B[Deep Link Router]
-        C[Theme Manager]
-        D[Dashboard UI]
+flowchart TD
+    subgraph Keystore_Layer["Hardware Keystore Layer"]
+        K_APP["expenso_master_key<br/>(AndroidKeyStore)"]
+        K_DB["expenso_db_master_key<br/>(AndroidKeyStore)"]
     end
-    
-    subgraph "🗺️ Core Activities"
-        E[TransactionsActivity]
-        F[BudgetsActivity]
-        G[AnalyticsActivity]
-        H[SettingsActivity]
-        I[AuthenticationActivity]
-        J[DataBackupActivity]
+
+    subgraph Key_Storage["Key Storage Layer"]
+        PREF_APP["EncryptedSharedPreferences<br/>app_prefs.xml"]
+        PREF_DB["DatabaseKeyManager Isolated Prefs<br/>expenso_db_key_prefs.xml"]
     end
-    
-    subgraph "📄 Detail Activities"
-        K[TransactionDetailsActivity]
-        L[ProfileActivity]
-        M[ConfigurationActivity]
-        N[SecureQueryRunnerActivity]
-        O[AllActivitiesActivity]
+
+    subgraph Operational_Crypto["Operational Cryptography"]
+        AES["AESEncryptionManager<br/>AES-256-GCM 128-bit tag"]
+        PASS["PBKDF2WithHmacSHA256<br/>100,000 iterations, 32-byte salt"]
+        SQLC["SQLCipher 4.17.0 Engine<br/>AES-256-CBC per page"]
     end
-    
-    A --> I
-    B --> D
-    B --> E
-    B --> F
-    B --> G
-    B --> H
-    D --> J
-    
-    E --> K
-    H --> L
-    H --> M
-    
-    classDef main fill:#ff9800
-    classDef core fill:#4caf50
-    classDef detail fill:#2196f3
-    
-    class A,B,C,D main
-    class E,F,G,H,I,J core
-    class J,K,L detail
+
+    K_APP --> PREF_APP
+    K_DB --> PREF_DB
+    PREF_APP --> AES
+    PREF_APP --> PASS
+    PREF_DB -->|Passphrase| SQLC
 ```
 
-## ⚡ Performance Architecture
+### Key Security Safeguards:
+1. **Isolated Passphrase Management (`DatabaseKeyManager.java`)**: Ensures database availability is decoupled from user session state.
+2. **Timing Attack Protection**: Password verification uses `MessageDigest.isEqual()` for constant-time byte comparisons.
+3. **SafeQueryRunner AST Sandbox**: Direct SQL execution blocks destructive keywords (`DROP`, `DELETE`, `ALTER`, `INSERT`, `UPDATE`), injects mandatory `user_id` filtering, and caps results at 500 rows.
 
-### Optimization Strategies
+---
 
-```mermaid
-graph TB
-    subgraph "🚀 Performance Layers"
-        A[UI Optimization<br/>RecyclerView + DiffUtil]
-        B[Memory Management<br/>Lifecycle Awareness]
-        C[Database Optimization<br/>Indexing + Caching]
-        D[Background Processing<br/>ExecutorService]
-    end
-    
-    subgraph "📊 Monitoring"
-        E[Performance Metrics]
-        F[Memory Usage]
-        G[Database Performance]
-        H[UI Responsiveness]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    classDef performance fill:#e8f5e8
-    classDef monitoring fill:#e1f5fe
-    
-    class A,B,C,D performance
-    class E,F,G,H monitoring
-```
+## ⏱️ Application Lifecycle & Two-Phase Startup
 
-## 🔄 State Management
-
-### MVVM Pattern Implementation
-
-```mermaid
-graph LR
-    subgraph "📱 View Layer"
-        A[Fragment]
-        B[Activity]
-        C[Custom Views]
-    end
-    
-    subgraph "🧠 ViewModel Layer"
-        D[TransactionViewModel]
-        E[DashboardViewModel]
-        F[BudgetViewModel]
-    end
-    
-    subgraph "🔧 Model Layer"
-        G[Repository]
-        H[Use Cases]
-        I[Entities]
-    end
-    
-    A --> D
-    B --> E
-    C --> F
-    
-    D --> G
-    E --> H
-    F --> I
-    
-    classDef view fill:#e1f5fe
-    classDef viewmodel fill:#f3e5f5
-    classDef model fill:#e8f5e8
-    
-    class A,B,C view
-    class D,E,F viewmodel
-    class G,H,I model
-```
-
-## 🧪 Testing Architecture
-
-### Testing Strategy
-
-```mermaid
-graph TB
-    subgraph "🧪 Unit Tests"
-        A[Domain Logic]
-        B[Use Cases]
-        C[Repository Logic]
-        D[Security Components]
-    end
-    
-    subgraph "🔧 Integration Tests"
-        E[Database Operations]
-        F[Repository Integration]
-        G[Security Integration]
-        H[Data Flow]
-    end
-    
-    subgraph "📱 UI Tests"
-        I[Fragment Tests]
-        J[Navigation Tests]
-        K[User Flow Tests]
-        L[Accessibility Tests]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    E --> I
-    F --> J
-    G --> K
-    H --> L
-    
-    classDef unit fill:#e8f5e8
-    classDef integration fill:#fff3e0
-    classDef ui fill:#e1f5fe
-    
-    class A,B,C,D unit
-    class E,F,G,H integration
-    class I,J,K,L ui
-```
-
-## 📦 Package Structure
-
-### Clean Package Organization
-
-```
-com.offline.expenso/
-├── 📱 presentation/          # UI Layer
-│   ├── ui/activities/       # Activities
-│   ├── ui/viewmodels/       # ViewModels
-│   ├── ui/adapters/         # RecyclerView Adapters
-│   ├── ui/fragments/        # Dialog Fragments
-│   ├── ui/dialogs/          # Dialog Components
-│   ├── common/base/         # Base Classes
-│   ├── common/utils/        # UI Utilities
-│   ├── theming/             # Theme Management
-│   └── navigation/          # Navigation Helpers
-├── 🔧 domain/               # Business Logic
-│   ├── entities/            # Domain Models
-│   │   ├── Budget           # Budget with recurring support
-│   │   ├── BudgetHistory    # Budget period snapshots
-│   │   └── ...              # Other entities
-│   ├── usecases/            # Business Use Cases
-│   ├── repositories/        # Repository Interfaces
-│   ├── services/            # Domain Services
-│   ├── enums/               # Business Enums
-│   └── value_objects/       # Value Objects
-├── 💾 data/                 # Data Layer
-│   ├── local/database/      # Room Database
-│   ├── local/dao/           # Data Access Objects
-│   ├── repositories/        # Repository Implementations
-│   │   ├── BudgetRepository         # Budget CRUD
-│   │   ├── BudgetHistoryRepository  # History access
-│   │   └── ...
-│   ├── security/            # Security Components
-│   ├── backup/              # Backup & Restore System
-│   │   ├── BackupManager        # Multi-table backup orchestrator
-│   │   ├── RestoreManager       # Multi-table restore orchestrator
-│   │   ├── ZipBackupHandler     # ZIP archive handling
-│   │   ├── ManifestManager      # Manifest JSON handling
-│   │   ├── models/              # Backup/restore models
-│   │   ├── exporters/           # Table-specific CSV exporters (7)
-│   │   └── importers/           # Table-specific CSV importers (7)
-│   ├── budget/              # Budget Workers
-│   │   ├── BudgetResetWorker       # Period reset
-│   │   └── BudgetResetScheduler    # Scheduler
-│   ├── mappers/             # Data Mappers
-│   └── analytics/           # Analytics Engine
-└── 🔒 core/                 # Shared Components
-    ├── security/            # Security Utilities
-    └── threading/           # ExecutorService Management
-```
-
-## 🎯 Key Architectural Decisions
-
-### 1. Activity-Based Navigation Pattern
-- **Benefit**: Clear separation of concerns and better back stack management
-- **Implementation**: Multiple activities with Intent-based navigation and deep link support
-
-### 2. Clean Architecture
-- **Benefit**: Separation of concerns and testability
-- **Implementation**: Clear layer boundaries with dependency inversion
-
-### 3. MVVM Pattern
-- **Benefit**: Reactive UI updates and lifecycle management
-- **Implementation**: ViewModels with LiveData for state management
-
-### 4. Repository Pattern
-- **Benefit**: Data source abstraction and testability
-- **Implementation**: Interface-based repositories with secure implementations
-
-### 5. Security-First Design
-- **Benefit**: Enterprise-grade data protection
-- **Implementation**: Multi-layer encryption with Android Keystore and EncryptedSharedPreferences
-
-### 6. Centralized Thread Management
-- **Benefit**: Efficient resource utilization and better performance
-- **Implementation**: AppExecutorService with dedicated database and background thread pools
-
-### 7. Two-Phase Application Initialization
-- **Benefit**: Prevents main thread blocking while ensuring proper initialization order
-- **Implementation**: 
-  - Critical components (SessionManager, ThemeManager) initialize synchronously
-  - Heavy components (Database, Encryption, Repositories) initialize asynchronously
-  - Activities use InitializationListener pattern to wait for completion
-  - 15-second timeout with automatic recovery on failure
-
-### 8. Unified Launcher Activity
-- **Benefit**: Simplified architecture with direct entry to functional content
-- **Implementation**: 
-  - `DashboardActivity` serves as both launcher activity and dashboard UI
-  - Combines authentication checks, session management, deep link routing, and dashboard functionality
-  - Eliminates intermediate activity step for faster app launch
-  - All other activities have `DashboardActivity` as parent activity
-
-## 🔄 Application Initialization Architecture
-
-### Initialization Flow
+To prevent cold-start UI freezes while initializing heavy cryptographic providers:
 
 ```mermaid
 sequenceDiagram
+    participant OS as Android OS
     participant App as ExpensoApplication
-    participant Main as MainThread
-    participant BG as BackgroundThread
-    participant Act as Activity
-    participant DB as Database
-    participant Key as Keystore
-    
-    App->>Main: onCreate()
-    Main->>Main: Initialize Critical (Sync)
-    Main->>Main: SessionManager
-    Main->>Main: ThemeManager
-    Main->>BG: Initialize Heavy (Async)
-    
-    BG->>Key: Access Android Keystore
-    Key-->>BG: Encryption Keys
-    BG->>BG: Initialize EncryptionManager
-    BG->>DB: Initialize SQLCipher
-    DB-->>BG: Database Instance
-    BG->>BG: Initialize Repositories
-    BG->>BG: Initialize Services
-    BG->>App: Initialization Complete
-    
-    App->>Act: Notify Listeners
-    Act->>Act: Initialize ViewModel
-    Act->>DB: Access Repository
-    DB-->>Act: Data Available
+    participant Main as Main Thread
+    participant BG as Background Executor
+    participant UI as DashboardActivity
+
+    OS->>App: onCreate()
+    App->>Main: Phase 1: Initialize SessionManager & ThemeManager
+    Main-->>App: UI theme applied immediately
+    App->>BG: Phase 2: Asynchronous heavy setup
+    App->>UI: Launch DashboardActivity
+    UI->>App: awaitInitialization(15, SECONDS)
+    BG->>BG: Setup Keystore & AESEncryptionManager
+    BG->>BG: Open SQLCipher AppDatabase v14
+    BG->>BG: Initialize Repositories & Schedulers
+    BG->>App: initializationLatch.countDown()
+    App-->>UI: Latch released / listener triggered
+    UI->>UI: Populate financial cards & live data
 ```
 
-### Initialization Components
+---
 
-#### Critical Phase (Synchronous - Main Thread)
-1. **SessionManager**: Needed immediately for authentication checks
-   - Lightweight initialization
-   - Uses EncryptedSharedPreferences
-   - Handles session recovery automatically
+## ⏰ Background Scheduling & Workers
 
-2. **ThemeManager**: Required for UI rendering
-   - Applies user theme preference
-   - Validates theme settings
-   - Minimal overhead
+1. **Daily Budget Resets (`BudgetResetWorker.java`)**:
+   - Scheduled via AndroidX `WorkManager` daily periodic request.
+   - Evaluates active recurring budgets against current time.
+   - Moves spent amounts to `budget_history` and rolls dates forward.
+2. **Exact Payment Reminders (`ReminderAlarmScheduler.java`)**:
+   - Uses `AlarmManager.setExactAndAllowWhileIdle()` on Android 6.0+.
+   - Checks `AlarmManager.canScheduleExactAlarms()` on Android 12+ (API 31+).
+   - Direct notification actions handled by `ReminderActionReceiver`.
 
-#### Heavy Phase (Asynchronous - Background Thread)
-1. **EncryptionManager**: Setup encryption infrastructure
-   - Android Keystore access (may be slow on first access)
-   - Master key generation/retrieval
-   - Database passphrase derivation
+---
 
-2. **AppDatabase**: SQLCipher database initialization
-   - Database file creation/opening
-   - SQLCipher passphrase setup
-   - Schema validation and migration
-   - Potentially slow on first launch
+## 📦 Package Structure
 
-3. **Repositories**: Data access layer initialization
-   - TransactionSecureRepository
-   - UserSecureRepository
-   - BudgetRepository
-   - BudgetHistoryRepository
-   - ConfigurationRepository
+```
+com.offline.expenso/
+├── ExpensoApplication.java                 # Lifecycle & init orchestrator
+├── core/                                   # Platform tools
+│   ├── logging/                            # AppLogger
+│   ├── security/                           # BiometricManager
+│   ├── threading/                          # AppExecutorService
+│   └── updates/                            # AppUpdateManager
+├── data/                                   # Data Layer
+│   ├── analytics/                          # OfflineAnalyticsEngine
+│   ├── backup/                             # Multi-table backup/restore
+│   ├── budget/                             # BudgetResetWorker
+│   ├── events/                             # TransactionEventBus
+│   ├── file/                               # CentralizedFileLocationManager
+│   ├── local/dao/                          # Room DAOs
+│   ├── local/database/                     # AppDatabase, SafeQueryRunner
+│   ├── local/preferences/                  # SecurePreferencesManager
+│   ├── mappers/                            # Domain ↔ Entity mappers
+│   ├── reminder/                           # RecurrenceEngine & Alarms
+│   ├── repositories/                       # Secure repositories
+│   ├── security/                           # Cryptography managers
+│   └── statement/                          # PdfStatementGenerator
+├── domain/                                 # Domain Layer
+│   ├── entities/                           # Domain models
+│   ├── enums/                              # Business enums
+│   ├── repositories/                       # Repository interfaces
+│   ├── services/                           # Domain logic services
+│   ├── usecases/                           # Clean use cases
+│   └── value_objects/                      # Money
+└── presentation/                           # Presentation Layer
+    ├── common/                             # Base classes & shimmer
+    ├── theming/                            # ThemeManager
+    └── ui/                                 # Activities, ViewModels, Adapters
+```
 
-4. **Domain Services**: Business logic services
-   - ConfigurationService
-   - ConfigurationSeedingService
-   - UserRegistrationService
+---
 
-5. **WorkManager Schedulers**: Background task scheduling
-   - BudgetResetScheduler (daily budget period reset)
-   - Auto backup scheduler (user-configured frequency)
+## ⚡ Performance & Android 15/16 Compatibility
 
-### Initialization Safety Mechanisms
-
-#### Thread Safety
-- **AtomicBoolean**: Thread-safe initialization state tracking
-- **CountDownLatch**: Synchronization primitive for blocking wait
-- **CopyOnWriteArrayList**: Thread-safe listener management
-- **Volatile Fields**: Safe publication of initialized components
-
-#### Error Handling
-- **Exception Capture**: All initialization errors captured and stored
-- **Initialization Error**: Exception stored for later retrieval
-- **Timeout Protection**: 15-second timeout prevents indefinite blocking
-- **Automatic Recovery**: Retry mechanism for transient failures
-
-#### Activity Integration
-- **InitializationListener**: Interface for async notification
-- **addInitializationListener()**: Register for initialization completion
-- **removeInitializationListener()**: Clean up listeners
-- **isInitialized()**: Check initialization status synchronously
-- **awaitInitialization()**: Block until initialization (with timeout)
-
-### Initialization Sequence Example
-
-**DashboardActivity (Launcher Activity) Initialization Flow:**
-1. Check authentication first - redirect to `AuthenticationActivity` if user is not logged in
-2. Set content view to dashboard layout
-3. Initialize theme and handle deep links
-4. Initialize ViewModels using the `InitializationListener` pattern:
-   - If app is already initialized, proceed immediately with ViewModel setup
-   - If not initialized, register an `InitializationListener` to wait for completion
-   - Handle initialization failures by showing error messages
-   - Ensure all UI updates occur on the main thread and check activity lifecycle state
-
-### Performance Considerations
-
-#### Optimization Strategies
-- **Lazy Initialization**: Only initialize when needed
-- **Background Processing**: Heavy work on background threads
-- **Timeout Protection**: Prevent indefinite waiting
-- **Graceful Degradation**: Continue with partial initialization if possible
-
-#### Initialization Timing
-- **First Launch**: ~2-5 seconds (database creation, key generation)
-- **Subsequent Launches**: ~500ms-1s (database opening, key retrieval)
-- **Timeout**: 15 seconds maximum wait time
-- **Recovery Time**: Additional 2-3 seconds if recovery needed
-
-### Memory Management
-
-#### Lifecycle Integration
-- **onLowMemory()**: Clean up caches, close database connections
-- **onTrimMemory()**: Release non-essential resources
-- **onTerminate()**: Not reliable on production devices, not used
-
-#### Resource Cleanup
-- **Database Closing**: Proper SQLCipher connection closure
-- **Executor Shutdown**: Graceful executor service shutdown
-- **Listener Cleanup**: Remove initialization listeners on activity destroy
-
-## 🚀 Scalability Considerations
-
-### Horizontal Scaling
-- **Modular Architecture**: Easy to add new features
-- **Clean Interfaces**: Simple to extend functionality
-- **Testable Components**: Reliable feature additions
-
-### Vertical Scaling
-- **Performance Optimization**: Efficient database queries
-- **Memory Management**: Lifecycle-aware components
-- **Background Processing**: Non-blocking operations
-
-### Future Enhancements
-- **Plugin Architecture**: Extensible functionality
-- **API Integration**: External service connectivity
-- **Cloud Sync**: Optional data synchronization
+1. **16KB Memory Page Size**: NDK packaging configured for 16KB ELF alignment across all target ABIs (`armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`) for Android 15+ kernels.
+2. **In-Memory Reactive Caching**: Repositories cache computed balances, eliminating redundant SQL transactions on repeated view visits.
+3. **85% Jacoco Line Coverage**: CI pipeline enforces coverage threshold on unit tests (`./gradlew testDebugUnitTest jacocoTestCoverageVerification`).
 
 ---
 
 ## 📚 Related Documentation
 
-- **[README.md](../README.md)** - Project overview, technology stack, and getting started guide
-- **[FEATURES.md](FEATURES.md)** - Comprehensive feature documentation
-- **[SECURITY.md](SECURITY.md)** - Security implementation details
-- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete user manual with instructions
-- **[QUERY_RUNNER.md](QUERY_RUNNER.md)** - Advanced SQL query feature guide
-- **[TERMS_AND_CONDITIONS.md](TERMS_AND_CONDITIONS.md)** - Application terms of use
+- **[README.md](../README.md)** - Project overview and quick start.
+- **[SECURITY.md](SECURITY.md)** - Cryptographic implementation details.
+- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete user manual.
+- **[QUERY_RUNNER.md](QUERY_RUNNER.md)** - Safe Query Runner guide and schema.
+- **[FEATURES.md](FEATURES.md)** - Full feature specifications.
