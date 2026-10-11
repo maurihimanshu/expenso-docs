@@ -2,6 +2,13 @@
 
 > **Modern Android Finance Management App** - 100% Offline, Zero-Telemetry, Enterprise-Grade Security
 
+<a href="https://play.google.com/store/apps/details?id=com.offline.expenso">
+  <img alt="Get it on Google Play" height="80" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
+</a>
+
+<br/>
+
+[![Google Play](https://img.shields.io/badge/Google_Play-Expenso-34A853?logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=com.offline.expenso)
 [![Android SDK](https://img.shields.io/badge/Android%20SDK-24%20to%2036-brightgreen.svg)](https://developer.android.com)
 [![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
 [![SQLCipher](https://img.shields.io/badge/SQLCipher-4.17.0-blue.svg)](https://www.zetetic.net/sqlcipher/)
@@ -322,13 +329,23 @@ Generates formal financial reports offline with iText7:
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Download on Google Play
+
+<a href="https://play.google.com/store/apps/details?id=com.offline.expenso">
+  <img alt="Get it on Google Play" height="60" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
+</a>
+
+Get Expenso directly on your Android device from the [Google Play Store](https://play.google.com/store/apps/details?id=com.offline.expenso).
+
+### Building from Source
+
+#### Prerequisites
 - **Android Studio**: Ladybug / Koala / Hedgehog or later
 - **Android SDK**: `minSdk = 24`, `targetSdk = 36`
 - **JDK**: Java 17
 - **Gradle**: 8.11.1 (included via `./gradlew`)
 
-### Installation & Run
+#### Installation & Run
 1. Clone the repository and open `expenso-android` in Android Studio:
    ```bash
    git clone https://github.com/maurihimanshu/expenso-android.git
