@@ -2,19 +2,21 @@
 
 > **Modern Android Finance Management App** - 100% Offline, Zero-Telemetry, Enterprise-Grade Security
 
-<a href="https://play.google.com/store/apps/details?id=com.offline.expenso">
-  <img alt="Get it on Google Play" height="80" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
-</a>
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.offline.expenso">
+    <img alt="Get it on Google Play" height="80" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
+  </a>
+</p>
 
-<br/>
-
-[![Google Play](https://img.shields.io/badge/Google_Play-Expenso-34A853?logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=com.offline.expenso)
-[![Android SDK](https://img.shields.io/badge/Android%20SDK-24%20to%2036-brightgreen.svg)](https://developer.android.com)
-[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
-[![SQLCipher](https://img.shields.io/badge/SQLCipher-4.17.0-blue.svg)](https://www.zetetic.net/sqlcipher/)
-[![Room](https://img.shields.io/badge/Room-2.6.1-blue.svg)](https://developer.android.com/training/data-storage/room)
-[![Coverage](https://img.shields.io/badge/Jacoco%20Coverage-85%25%20Threshold-success.svg)](https://www.jacoco.org)
-[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline-success.svg)](#-privacy-first)
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.offline.expenso"><img src="https://img.shields.io/badge/Google_Play-Expenso-34A853?logo=google-play&logoColor=white" alt="Google Play" /></a>
+  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android%20SDK-24%20to%2036-brightgreen.svg" alt="Android SDK" /></a>
+  <a href="https://www.oracle.com/java/"><img src="https://img.shields.io/badge/Java-17-orange.svg" alt="Java" /></a>
+  <a href="https://www.zetetic.net/sqlcipher/"><img src="https://img.shields.io/badge/SQLCipher-4.17.0-blue.svg" alt="SQLCipher" /></a>
+  <a href="https://developer.android.com/training/data-storage/room"><img src="https://img.shields.io/badge/Room-2.6.1-blue.svg" alt="Room" /></a>
+  <a href="https://www.jacoco.org"><img src="https://img.shields.io/badge/Jacoco%20Coverage-85%25%20Threshold-success.svg" alt="Coverage" /></a>
+  <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-success.svg" alt="Privacy" />
+</p>
 
 ---
 
@@ -331,11 +333,15 @@ Generates formal financial reports offline with iText7:
 
 ### Download on Google Play
 
-<a href="https://play.google.com/store/apps/details?id=com.offline.expenso">
-  <img alt="Get it on Google Play" height="60" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
-</a>
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.offline.expenso">
+    <img alt="Get it on Google Play" height="70" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
+  </a>
+</p>
 
-Get Expenso directly on your Android device from the [Google Play Store](https://play.google.com/store/apps/details?id=com.offline.expenso).
+<p align="center">
+  Get Expenso directly on your Android device from the <a href="https://play.google.com/store/apps/details?id=com.offline.expenso"><strong>Google Play Store</strong></a>.
+</p>
 
 ### Building from Source
 
